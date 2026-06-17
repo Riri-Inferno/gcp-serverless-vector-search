@@ -58,6 +58,10 @@ terraform/
 
 Cloudflare 側のリソース（`vector-search.api.riri-inferno.com` の DNS など）は、`riri-inferno.com` 全体を管理している [home-raspi-iac](https://github.com/Riri-Inferno/home-raspi-iac) の `terraform/cloudflare/` で一元管理する。複数リポジトリで CF を触らないこと。
 
+## セキュリティ & コスト保護
+
+DDoS や課金暴騰に対する多層防御方針は [docs/security.md](docs/security.md) を参照。Cloudflare 側の対策（WAF Custom Rules / Rate Limiting）は [home-raspi-iac](https://github.com/Riri-Inferno/home-raspi-iac) で管理する。
+
 ## ステータス
 
 WIP — 初期構築フェーズ。最小構成（テキスト登録/検索のみ、画像は後回し）から組み上げる。

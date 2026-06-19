@@ -29,6 +29,17 @@ security:
 - グローバルに `security` を適用し、`/healthz` だけ operation-level で `security: []` で上書きして認証を解除する
 - API Key の発行・rotation は GCP コンソール / Terraform で管理する（具体的な管理方法は将来別 ADR）
 
+### 補足: ヘッダ名は `x-api-key` (lowercase) で固定
+
+GCP API Gateway / ESPv2 が API Key として認識する場所は内部的に固定されている：
+
+- Header: `x-api-key` / `api_key`
+- Query: `key` / `api_key`
+
+`securitySchemes.name` に任意のカスタムヘッダ名（例: `X-Custom-Token`）を指定してもプロキシ層で読み取られず動作しない。公式サンプルが lowercase で書かれていることに合わせ、`name: x-api-key` を採用する。
+
+真のカスタムヘッダ認証が必要になった場合は API Key 機構を捨てて JWT 等に切り替える別 ADR を起こすこと。
+
 ## Consequences
 
 - Cloud Functions に **認証コードを書かなくてよい**（API Gateway 段で弾かれる）

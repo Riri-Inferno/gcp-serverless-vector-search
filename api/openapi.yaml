@@ -1,0 +1,248 @@
+openapi: 3.0.4
+
+info:
+  title: gcp-serverless-vector-search API
+  description: |
+    マルチモーダル対応のサーバーレス・ベクトル検索 API (MVP)。
+    最初のフェーズではテキスト登録 / 検索のみを提供する。
+
+    設計判断の経緯は `docs/adr/` を参照:
+      - 0001 API MVP 設計（エンドポイント / ID / メタデータ / スコア / エラー）
+      - 0002 OpenAPI 3.0.4 採用
+      - 0003 X-API-Key ヘッダ認証
+  version: 0.1.0
+  contact:
+    name: riri-vector-lab-2026
+
+servers:
+  - url: https://vector-search.api.riri-inferno.com
+    description: 本番エンドポイント (Cloudflare 経由 / API Gateway へプロキシ)
+
+# GCP API Gateway 拡張: バックエンドとして Cloud Functions を指定。
+# REGION / FUNCTION_NAME は Terraform apply 時に確定し、PRE_DEPLOY で置換する想定。
+x-google-api-management:
+  backends:
+    functions_backend:
+      address: https://REGION-riri-vector-lab-2026.cloudfunctions.net/FUNCTION_NAME
+      pathTranslation: APPEND_PATH_TO_ADDRESS
+      protocol: "http/1.1"
+
+x-google-backend: functions_backend
+
+security:
+  - google_api_key: []
+
+components:
+
+  securitySchemes:
+    google_api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+
+  schemas:
+
+    DocumentCreateRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 8000
+          description: |
+            埋め込み対象テキスト。
+            gemini-embedding-2 の入力上限は 8192 トークンだが、文字数で 8000 を上限としておく
+            (実トークン数より少し余裕を持たせる安全側設定)。
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    Document:
+      type: object
+      required: [id, text, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: サーバー生成の UUID v4
+        text:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        created_at:
+          type: string
+          format: date-time
+          description: Firestore の createTime をそのまま返す
+
+    Metadata:
+      type: object
+      additionalProperties: true
+      maxProperties: 50
+      description: |
+        ドキュメントに付随する自由形式の情報。スキーマは固定しない。
+        シリアライズ後 4KB を目安とする。
+        例: { "source": "https://...", "category": "tech", "tags": ["python"] }
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: 返却する近傍件数
+
+    SearchResult:
+      type: object
+      required: [id, text, score]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: cosine similarity (1.0 = 同一)
+
+    SearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+
+    HealthzResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      description: |
+        RFC 7807 風のエラーレスポンス。`type` は URI ではなく短いスラグ文字列。
+      properties:
+        type:
+          type: string
+          description: エラー種別のスラグ。例 "validation_error" / "unauthorized" / "payload_too_large" / "internal_error"
+        title:
+          type: string
+          description: 人間可読の簡潔メッセージ
+        status:
+          type: integer
+          description: HTTP ステータスコード
+        detail:
+          type: string
+          description: 詳細メッセージ（任意）
+
+  responses:
+
+    ValidationError:
+      description: リクエストバリデーション失敗
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    Unauthorized:
+      description: API Key 不在 / 不一致
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    PayloadTooLarge:
+      description: リクエスト本体がサイズ上限超過
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    InternalError:
+      description: サーバー内部エラー
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+paths:
+
+  /healthz:
+    get:
+      summary: 死活監視
+      operationId: healthz
+      security: []  # 認証不要 (D1 Cloudflare 側で /healthz に Rate Limit / Cache を効かせる)
+      responses:
+        '200':
+          description: 稼働中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthzResponse'
+
+  /v1/documents:
+    post:
+      summary: テキストを埋め込みベクトル化してドキュメントとして保存
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreateRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/search:
+    post:
+      summary: 自然言語クエリで近傍検索
+      operationId: searchDocuments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: 検索結果（該当なしの場合は空配列）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'

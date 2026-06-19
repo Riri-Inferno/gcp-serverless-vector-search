@@ -97,6 +97,16 @@ workflow には `permissions.id-token: write` を付与する。これにより 
 
 PR plan は fork ではなく同一 repository の PR を主対象とする。外部 fork からの PR で plan を動かす必要が出た場合は、OIDC / secrets / 権限境界を別途見直す。
 
+apply workflow には **`concurrency` group を必ず設定する**。`develop` への連続 push で apply が並行起動すると、tfstate のロック競合や差分の取り違えが起きる。グループ名を固定して `cancel-in-progress: false` でシリアル化する：
+
+```yaml
+concurrency:
+  group: terraform-gcp-apply
+  cancel-in-progress: false
+```
+
+plan workflow は PR 単位で並列実行されてよいので、設定するなら `group: terraform-gcp-plan-${{ github.ref }}` のように PR ごとに分ける。
+
 ## 設計項目: WIF / OIDC 信頼境界
 
 **目的**: 長期鍵を GitHub Secrets に置かず、短命 token で Terraform を実行する。
@@ -165,18 +175,43 @@ state bucket には以下を設定する：
 
 tfstate には secret value を含む可能性があるため、bucket IAM は Terraform CI SA と管理者に限定する。
 
+### Lock 方式
+
+Terraform 1.10 以降、GCS backend は **オブジェクトベースの native lock** をサポートする。`backend "gcs"` ブロックに `use_lockfile = true` を指定するだけで lock ファイルが state と同じ bucket 上に作られ、別途 Firestore / Spanner などの外部 lock サービスは不要：
+
+```hcl
+terraform {
+  backend "gcs" {
+    bucket       = "riri-vector-lab-2026-tfstate"  # 仮称、bootstrap で決定
+    prefix       = "gcp"
+    use_lockfile = true
+  }
+}
+```
+
+state bucket と同じ場所にロック情報が置かれるので、`force_destroy = false` の保護対象に含まれる。
+
 ---
 
 ## 初回構築フロー
 
-1. `riri-vector-lab-2026` に対してローカル管理者認証を行う
-2. `terraform/bootstrap/` を local backend で `terraform init`
-3. `terraform/bootstrap/` を `terraform apply`
-4. 作成された WIF Provider 名と CI SA email を GitHub Actions workflow に設定
-5. `terraform/gcp/` の GCS backend を `terraform init`
-6. PR で `terraform-gcp-plan.yml` が通ることを確認
-7. `develop` merge で `terraform-gcp-apply.yml` が通ることを確認
-8. 必要なら bootstrap state を GCS backend へ移行
+1. `riri-vector-lab-2026` に対してローカル管理者認証を行う（`gcloud auth login` + `gcloud config set project riri-vector-lab-2026`）
+2. **bootstrap apply の前提となる API を手動で有効化する**：
+   ```bash
+   gcloud services enable \
+     iamcredentials.googleapis.com \
+     cloudresourcemanager.googleapis.com \
+     serviceusage.googleapis.com \
+     iam.googleapis.com
+   ```
+   これらが無効だと WIF Provider 作成や CI SA の impersonation 設定で apply が転ける。bootstrap 自身が `google_project_service` で同じ API を有効化する形にしても、**初回 apply 時の依存関係を解くために事前有効化が必要**
+3. `terraform/bootstrap/` を local backend で `terraform init`
+4. `terraform/bootstrap/` を `terraform apply`
+5. 作成された WIF Provider 名と CI SA email を GitHub Actions workflow に設定
+6. `terraform/gcp/` の GCS backend を `terraform init`（`use_lockfile = true` を指定）
+7. PR で `terraform-gcp-plan.yml` が通ることを確認
+8. `develop` merge で `terraform-gcp-apply.yml` が通ることを確認
+9. 必要なら bootstrap state を GCS backend へ移行
 
 ## 採用しない対策（初期フェーズ）
 

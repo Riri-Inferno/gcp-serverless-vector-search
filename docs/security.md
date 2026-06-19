@@ -38,6 +38,17 @@ flowchart TD
 | Bot Fight Mode | 簡易ボット対策 | 無料 |
 | DDoS Protection | ネットワーク/トランスポート層 DDoS は標準で常時有効 | 無料 |
 
+### `/healthz` の保護方針
+
+`/healthz` は認証不要（[`api/openapi.yaml`](../api/openapi.yaml) で `security: []` により認証を解除）なため、無条件で API Gateway → Cloud Functions に到達できる。DDoS で叩かれると無意味なコンテナ起動課金が発生し得るので、**Cloudflare 側で吸収する**。
+
+| 対策 | 内容 |
+|------|------|
+| Rate Limiting Rule | `/healthz` 専用に例 60 req/min/IP（無料枠の1ルール） |
+| Cache Rule         | `/healthz` レスポンスを Edge で 10〜30秒キャッシュし、origin リクエストを激減させる |
+
+無料 Rate Limiting Rule は1個しか使えないため、`/v1/search` 等の認証必須エンドポイントは API Gateway の API Key 検証で起動前に弾けることを踏まえ、**Rate Limit Rule は `/healthz` 優先で消費する** 判断もあり得る。最終的にどちらに割り当てるかは Cloudflare 側 (`home-raspi-iac/terraform/cloudflare/`) の作業時に確定する。
+
 **管理場所**: 本リポジトリでは管理しない。Cloudflare ゾーン (`riri-inferno.com`) は [home-raspi-iac](https://github.com/Riri-Inferno/home-raspi-iac) の `terraform/cloudflare/` で一元管理しているため、WAF/Rate Limit ルールもそちらに追加する。
 
 **注**: 本格的なシグネチャベース WAF（Managed Rulesets）は Pro プラン（$20/月）以上。個人ラボでは Custom + Rate Limit で十分と判断。

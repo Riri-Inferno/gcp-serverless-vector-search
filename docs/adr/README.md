@@ -25,3 +25,4 @@
 | [0001](0001-api-design-mvp.md) | API MVP 設計（エンドポイント / ID / メタデータ / スコア / エラー） | Accepted |
 | [0002](0002-openapi-version.md) | OpenAPI バージョンは 3.0.4 を採用 | Accepted |
 | [0003](0003-authentication.md) | 認証は `X-API-Key` ヘッダ | Accepted |
+| [0004](0004-firestore-embedding-model-field.md) | Firestore ドキュメントに `embedding_model` フィールドを追加 (0001 を補足) | Accepted |

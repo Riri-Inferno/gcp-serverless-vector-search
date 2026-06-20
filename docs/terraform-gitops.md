@@ -177,19 +177,20 @@ tfstate には secret value を含む可能性があるため、bucket IAM は T
 
 ### Lock 方式
 
-Terraform 1.10 以降、GCS backend は **オブジェクトベースの native lock** をサポートする。`backend "gcs"` ブロックに `use_lockfile = true` を指定するだけで lock ファイルが state と同じ bucket 上に作られ、別途 Firestore / Spanner などの外部 lock サービスは不要：
+GCS backend は **object generation 番号ベースで暗黙にロック** されるため、追加のロック設定は不要：
 
 ```hcl
 terraform {
   backend "gcs" {
-    bucket       = "riri-vector-lab-2026-tfstate"  # 仮称、bootstrap で決定
-    prefix       = "gcp"
-    use_lockfile = true
+    bucket = "riri-vector-lab-2026-tfstate"  # 仮称、bootstrap で決定
+    prefix = "gcp"
   }
 }
 ```
 
-state bucket と同じ場所にロック情報が置かれるので、`force_destroy = false` の保護対象に含まれる。
+別途 Firestore / Spanner などの外部 lock サービスを用意する必要はない。
+
+> 補足: `use_lockfile = true` という設定は S3 backend 専用 (Terraform 1.13 以降)。GCS backend では未サポートのため指定すると init 段階でエラーになる。
 
 ---
 
@@ -208,7 +209,7 @@ state bucket と同じ場所にロック情報が置かれるので、`force_des
 3. `terraform/bootstrap/` を local backend で `terraform init`
 4. `terraform/bootstrap/` を `terraform apply`
 5. 作成された WIF Provider 名と CI SA email を GitHub Actions workflow に設定
-6. `terraform/gcp/` の GCS backend を `terraform init`（`use_lockfile = true` を指定）
+6. `terraform/gcp/` の GCS backend を `terraform init`
 7. PR で `terraform-gcp-plan.yml` が通ることを確認
 8. `develop` merge で `terraform-gcp-apply.yml` が通ることを確認
 9. 必要なら bootstrap state を GCS backend へ移行

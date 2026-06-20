@@ -57,7 +57,8 @@ jobs:
           terraform plan -no-color -input=false -out=tfplan 2>&1 | tee plan.txt
 
       - name: Sticky PR comment
-        if: github.event_name == 'pull_request'
+        # always() を付けることで init / validate / plan のどこで落ちても PR に結果コメントを残す。
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -67,12 +68,13 @@ jobs:
             try {
               output = fs.readFileSync('terraform/gcp/plan.txt', 'utf8');
             } catch (e) {
-              output = '(plan output not available — check Actions log)';
+              output = '(plan output not available — init/validate 段階で失敗した可能性、Actions log を参照)';
             }
             if (output.length > 60000) {
               output = output.substring(0, 60000) + '\n\n... (truncated, see Actions log for full output)';
             }
-            const status = '${{ steps.plan.outcome }}';
+            // 早期失敗 (init/validate 段階) で plan step が未実行のときは 'skipped' になる
+            const status = '${{ steps.plan.outcome }}' || 'skipped';
             const body = `${header}\n### Terraform Plan: \`terraform/gcp\` — **${status}**\n\n<details><summary>Plan output</summary>\n\n\`\`\`hcl\n${output}\n\`\`\`\n\n</details>\n\n_workflow: \`terraform-gcp-plan.yml\` · run #${context.runNumber}_`;
 
             const comments = await github.rest.issues.listComments({

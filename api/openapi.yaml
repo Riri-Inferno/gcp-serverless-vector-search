@@ -18,16 +18,10 @@ servers:
   - url: https://vector-search.api.riri-inferno.com
     description: 本番エンドポイント (Cloudflare 経由 / API Gateway へプロキシ)
 
-# GCP API Gateway 拡張: バックエンドとして Cloud Functions を指定。
-# REGION / FUNCTION_NAME は Terraform apply 時に確定し、PRE_DEPLOY で置換する想定。
-x-google-api-management:
-  backends:
-    functions_backend:
-      address: https://REGION-riri-vector-lab-2026.cloudfunctions.net/FUNCTION_NAME
-      pathTranslation: APPEND_PATH_TO_ADDRESS
-      protocol: "http/1.1"
-
-x-google-backend: functions_backend
+# 本ファイルは Terraform の templatefile() で読まれる「テンプレート」を兼ねている。
+# `${healthz_url}` / `${vector_api_url}` は terraform apply 時に Cloud Function の
+# 実 URL に置換される (terraform/gcp/api_gateway.tf 参照)。
+# x-google-backend は operation ごとに指定し、global backend は使わない (関数別 URL のため)。
 
 security:
   - google_api_key: []
@@ -189,6 +183,10 @@ paths:
       summary: 死活監視
       operationId: healthz
       security: []  # 認証不要 (D1 Cloudflare 側で /healthz に Rate Limit / Cache を効かせる)
+      x-google-backend:
+        address: ${healthz_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+        jwt_audience: ${healthz_url}
       responses:
         '200':
           description: 稼働中
@@ -201,6 +199,10 @@ paths:
     post:
       summary: テキストを埋め込みベクトル化してドキュメントとして保存
       operationId: createDocument
+      x-google-backend:
+        address: ${vector_api_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+        jwt_audience: ${vector_api_url}
       requestBody:
         required: true
         content:
@@ -227,6 +229,10 @@ paths:
     post:
       summary: 自然言語クエリで近傍検索
       operationId: searchDocuments
+      x-google-backend:
+        address: ${vector_api_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+        jwt_audience: ${vector_api_url}
       requestBody:
         required: true
         content:

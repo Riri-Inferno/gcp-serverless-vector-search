@@ -83,6 +83,17 @@ resource "google_api_gateway_gateway" "vector_search" {
   depends_on = [google_api_gateway_api_config.vector_search]
 }
 
+# API Gateway がデプロイ時に動的に作る managed service を有効化する。
+# これが無いと API Key 経由の呼出で 403 "API has not been used in project ... before
+# or it is disabled" が返る。managed service 名は google_api_gateway_api のリソース
+# 作成時に確定するため、services.tf 内の static set には入れられず本ファイルで個別に
+# 宣言する。
+resource "google_project_service" "vector_search_managed_service" {
+  project            = var.project_id
+  service            = google_api_gateway_api.vector_search.managed_service
+  disable_on_destroy = false
+}
+
 # ---------------------------------------------------------------------------
 # API Key
 # 値そのもの (key_string) は state に sensitive 値として保持される。配布は GCP コンソール

@@ -4,6 +4,9 @@
 #
 # .sops.yaml 自体は秘密値を含まないため git に commit する。
 creation_rules:
-  - path_regex: secrets/.*\.enc\.yaml$
+  # SOPS は `--encrypt <INPUT>` の INPUT ファイル名で creation_rules を解決する。
+  # よって素ファイル (`.yaml`) にマッチするパターンが必要。
+  # 暗号化後の `.enc.yaml` も同じ regex を踏むが、SOPS は再暗号化を試みないので問題なし。
+  - path_regex: secrets/.*\.yaml$
     encrypted_regex: ^.*$
     gcp_kms: projects/riri-vector-lab-2026/locations/global/keyRings/sops/cryptoKeys/sops-key

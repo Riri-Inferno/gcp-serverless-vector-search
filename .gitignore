@@ -6,6 +6,9 @@ terraform/gcp/.decrypted/
 secrets/*.yaml
 !secrets/*.enc.yaml
 
+# Cloud Functions ソースの一時 zip (terraform apply 時に archive_file が生成)
+terraform/gcp/.builds/
+
 # Python
 __pycache__/
 *.py[cod]

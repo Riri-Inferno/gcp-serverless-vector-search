@@ -23,16 +23,26 @@ resource "google_firestore_database" "default" {
 }
 
 # ベクトル検索用インデックス。`documents` コレクションの `embedding` フィールドに対する
-# 単一フィールドインデックスとして、1536次元・FLAT 走査で定義する。
+# インデックスを 1536次元・FLAT 走査で定義する。
 #
-# 距離関数 (COSINE / EUCLIDEAN / DOT_PRODUCT) はインデックス設定ではなく、
-# クエリ側 (find_nearest) で都度指定する仕様。よって本インデックスは距離関数を
-# 指定しない。Cloud Functions の実装側で COSINE を渡すこと。
+# 仕様メモ:
+#   - Firestore の Vector Index は `__name__` (ASCENDING) フィールドを **明示的に** 含めるのが
+#     公式の正準形。`__name__` を省略すると API 側で自動付加されるが、state と乖離して
+#     terraform plan で疑似 drift が発生するため、最初から明示する。
+#     参考: https://firebase.google.com/docs/firestore/query-data/indexing
+#   - 距離関数 (COSINE / EUCLIDEAN / DOT_PRODUCT) はインデックス設定ではなく、
+#     クエリ側 (find_nearest) で都度指定する仕様。よって本インデックスは距離関数を
+#     指定しない。Cloud Functions の実装側で COSINE を渡すこと。
 resource "google_firestore_index" "documents_embedding" {
   project     = var.project_id
   database    = google_firestore_database.default.name
   collection  = "documents"
   query_scope = "COLLECTION"
+
+  fields {
+    field_path = "__name__"
+    order      = "ASCENDING"
+  }
 
   fields {
     field_path = "embedding"

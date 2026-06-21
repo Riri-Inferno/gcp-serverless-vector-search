@@ -13,10 +13,15 @@
 locals {
   decrypted_file = "${path.module}/.decrypted/gemini-api-key.yaml"
   decrypted      = fileexists(local.decrypted_file) ? yamldecode(file(local.decrypted_file)) : {}
+
+  # try() で safe アクセス。decrypted が空 object のとき直接 `.gemini_api_key` を
+  # 参照すると `terraform validate` の静的型チェック (count を解決しない) で
+  # "object has no attributes" と落ちるため。
+  gemini_api_key = try(local.decrypted.gemini_api_key, "")
 }
 
 resource "google_secret_manager_secret" "gemini_api_key" {
-  count     = lookup(local.decrypted, "gemini_api_key", "") != "" ? 1 : 0
+  count     = local.gemini_api_key != "" ? 1 : 0
   secret_id = "gemini-api-key"
 
   replication {
@@ -27,7 +32,7 @@ resource "google_secret_manager_secret" "gemini_api_key" {
 }
 
 resource "google_secret_manager_secret_version" "gemini_api_key" {
-  count       = lookup(local.decrypted, "gemini_api_key", "") != "" ? 1 : 0
+  count       = local.gemini_api_key != "" ? 1 : 0
   secret      = google_secret_manager_secret.gemini_api_key[0].id
-  secret_data = local.decrypted.gemini_api_key
+  secret_data = local.gemini_api_key
 }

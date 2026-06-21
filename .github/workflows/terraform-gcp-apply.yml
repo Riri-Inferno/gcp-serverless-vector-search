@@ -43,6 +43,22 @@ jobs:
           workload_identity_provider: projects/1096526787406/locations/global/workloadIdentityPools/gh-actions-pool/providers/github-actions
           service_account: terraform-ci@riri-vector-lab-2026.iam.gserviceaccount.com
 
+      # SOPS で暗号化されたシークレットを CI 内で復号する (ADR 0006)。
+      # enc.yaml 未配置のフェーズ (KMS key だけ作成済み) では条件分岐で skip される。
+      - name: Install SOPS
+        uses: nhedger/setup-sops@v2
+
+      - name: Decrypt secrets (skip if not yet committed)
+        working-directory: .
+        run: |
+          mkdir -p terraform/gcp/.decrypted
+          if [ -f secrets/gemini-api-key.enc.yaml ]; then
+            sops decrypt secrets/gemini-api-key.enc.yaml > terraform/gcp/.decrypted/gemini-api-key.yaml
+            echo "Decrypted gemini-api-key.enc.yaml"
+          else
+            echo "secrets/gemini-api-key.enc.yaml not present — skipping decrypt"
+          fi
+
       - name: terraform init
         run: terraform init -input=false
 

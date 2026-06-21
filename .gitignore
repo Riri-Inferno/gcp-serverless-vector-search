@@ -1,3 +1,11 @@
+# SOPS / シークレット保護 (ADR 0006)
+#   - terraform/gcp/.decrypted/  CI/ローカルで一時生成される平文 yaml の出力先
+#   - secrets/*.yaml             素 (暗号化前 or 復号後) のシークレット。誤コミット防止
+#   - secrets/*.enc.yaml         暗号化済みファイルだけ git 入りを許可 (否定パターン)
+terraform/gcp/.decrypted/
+secrets/*.yaml
+!secrets/*.enc.yaml
+
 # Python
 __pycache__/
 *.py[cod]

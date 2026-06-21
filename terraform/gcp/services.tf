@@ -15,6 +15,7 @@ locals {
     "apigateway.googleapis.com",         # API Gateway 本体
     "servicemanagement.googleapis.com",  # API Gateway の OpenAPI 設定 deploy に必須
     "servicecontrol.googleapis.com",     # API Gateway runtime のサービスコントロール
+    "cloudkms.googleapis.com",           # SOPS の暗号化先 KMS key を管理 (ADR 0006)
   ])
 }
 

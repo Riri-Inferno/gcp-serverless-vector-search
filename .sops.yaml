@@ -1,0 +1,9 @@
+# SOPS encryption rules (ADR 0006).
+# `sops encrypt secrets/<name>.yaml > secrets/<name>.enc.yaml` で
+# 下記 KMS key で暗号化される。
+#
+# .sops.yaml 自体は秘密値を含まないため git に commit する。
+creation_rules:
+  - path_regex: secrets/.*\.enc\.yaml$
+    encrypted_regex: ^.*$
+    gcp_kms: projects/riri-vector-lab-2026/locations/global/keyRings/sops/cryptoKeys/sops-key

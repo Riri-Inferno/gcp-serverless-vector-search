@@ -51,6 +51,7 @@ locals {
     "roles/cloudfunctions.admin",            # Cloud Functions API
     "roles/datastore.owner",                 # Firestore + ベクトルインデックス
     "roles/apigateway.admin",                # API Gateway
+    "roles/cloudkms.admin",                  # KMS key resource-level IAM (SOPS 用、ADR 0006)
   ])
 }
 

@@ -21,7 +21,21 @@ servers:
 # 本ファイルは Terraform の templatefile() で読まれる「テンプレート」を兼ねている。
 # `${healthz_url}` / `${vector_api_url}` は terraform apply 時に Cloud Function の
 # 実 URL に置換される (terraform/gcp/api_gateway.tf 参照)。
-# x-google-backend は operation ごとに指定し、global backend は使わない (関数別 URL のため)。
+#
+# GCP API Gateway の OpenAPI 3.x 仕様では x-google-backend を operation に object で
+# 直書きできず、必ず x-google-api-management.backends で named backend を定義した上で
+# operation 側は名前文字列で参照する形式を要求する (Cannot convert to service config エラー対策)。
+
+x-google-api-management:
+  backends:
+    healthz_backend:
+      address: ${healthz_url}
+      path_translation: APPEND_PATH_TO_ADDRESS
+      jwt_audience: ${healthz_url}
+    vector_api_backend:
+      address: ${vector_api_url}
+      path_translation: APPEND_PATH_TO_ADDRESS
+      jwt_audience: ${vector_api_url}
 
 security:
   - google_api_key: []
@@ -183,10 +197,7 @@ paths:
       summary: 死活監視
       operationId: healthz
       security: []  # 認証不要 (D1 Cloudflare 側で /healthz に Rate Limit / Cache を効かせる)
-      x-google-backend:
-        address: ${healthz_url}
-        path_translation: APPEND_PATH_TO_ADDRESS
-        jwt_audience: ${healthz_url}
+      x-google-backend: healthz_backend
       responses:
         '200':
           description: 稼働中
@@ -199,10 +210,7 @@ paths:
     post:
       summary: テキストを埋め込みベクトル化してドキュメントとして保存
       operationId: createDocument
-      x-google-backend:
-        address: ${vector_api_url}
-        path_translation: APPEND_PATH_TO_ADDRESS
-        jwt_audience: ${vector_api_url}
+      x-google-backend: vector_api_backend
       requestBody:
         required: true
         content:
@@ -229,10 +237,7 @@ paths:
     post:
       summary: 自然言語クエリで近傍検索
       operationId: searchDocuments
-      x-google-backend:
-        address: ${vector_api_url}
-        path_translation: APPEND_PATH_TO_ADDRESS
-        jwt_audience: ${vector_api_url}
+      x-google-backend: vector_api_backend
       requestBody:
         required: true
         content:

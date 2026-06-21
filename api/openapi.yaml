@@ -196,7 +196,8 @@ paths:
     get:
       summary: 死活監視
       operationId: healthz
-      security: []  # 認証不要 (D1 Cloudflare 側で /healthz に Rate Limit / Cache を効かせる)
+      # GCP API Gateway は API Key 認証を持たない operation を service config に
+      # 含めない仕様のため、global security (X-API-Key) を継承する (ADR 0008)。
       x-google-backend: healthz_backend
       responses:
         '200':

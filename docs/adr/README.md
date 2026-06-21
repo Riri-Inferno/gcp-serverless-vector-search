@@ -27,3 +27,4 @@
 | [0003](0003-authentication.md) | 認証は `X-API-Key` ヘッダ | Accepted |
 | [0004](0004-firestore-embedding-model-field.md) | Firestore ドキュメントに `embedding_model` フィールドを追加 (0001 を補足) | Accepted |
 | [0005](0005-cloud-functions-runtime-stack.md) | Cloud Functions 実装スタック (Python 3.13 / functions-framework + Flask / Pydantic v2 / google-genai / sync) | Accepted |
+| [0006](0006-secret-management-sops-kms.md) | シークレット管理は SOPS + Cloud KMS で暗号化して git に置く | Accepted |

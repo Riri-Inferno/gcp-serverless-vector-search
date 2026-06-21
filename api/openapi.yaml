@@ -28,10 +28,15 @@ servers:
 
 x-google-api-management:
   backends:
+    # healthz は backend root に直接アクセス。Gateway path (/healthz / /healthz/ etc) は捨てる。
+    # APPEND_PATH_TO_ADDRESS だと末尾スラッシュ有無で API Gateway の path matching が
+    # 揺らぎ /healthz (slash なし) で 404 が返る現象があったため。
+    # healthz Cloud Function は path 無視で 200 を返す実装なので、CONSTANT_ADDRESS で問題なし。
     healthz_backend:
       address: ${healthz_url}
-      path_translation: APPEND_PATH_TO_ADDRESS
+      path_translation: CONSTANT_ADDRESS
       jwt_audience: ${healthz_url}
+    # vector_api は path で operation を分岐するため APPEND が必須。
     vector_api_backend:
       address: ${vector_api_url}
       path_translation: APPEND_PATH_TO_ADDRESS

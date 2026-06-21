@@ -44,12 +44,14 @@ resource "google_cloud_run_v2_service_iam_member" "invoke_vector_api" {
 # API Gateway リソース三段 (api → api_config → gateway)
 # ---------------------------------------------------------------------------
 resource "google_api_gateway_api" "vector_search" {
-  api_id = "vector-search"
+  provider = google-beta
+  api_id   = "vector-search"
 
   depends_on = [google_project_service.app_required]
 }
 
 resource "google_api_gateway_api_config" "vector_search" {
+  provider             = google-beta
   api                  = google_api_gateway_api.vector_search.api_id
   api_config_id_prefix = "config-"
 
@@ -73,6 +75,7 @@ resource "google_api_gateway_api_config" "vector_search" {
 }
 
 resource "google_api_gateway_gateway" "vector_search" {
+  provider   = google-beta
   api_config = google_api_gateway_api_config.vector_search.id
   gateway_id = "vector-search-gateway"
   region     = var.region

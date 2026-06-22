@@ -38,18 +38,18 @@ flowchart TD
 | Bot Fight Mode | 簡易ボット対策 | 無料 |
 | DDoS Protection | ネットワーク/トランスポート層 DDoS は標準で常時有効 | 無料 |
 
-### `/healthz` の保護方針
+### `/health` の保護方針
 
-`/healthz` は API Gateway の API Key 認証を必須とする（ADR 0008）。API Key 不在 or 不一致のリクエストは Cloud Functions 起動前に API Gateway で弾く。
+`/health` は API Gateway の API Key 認証を必須とする（ADR 0008）。API Key 不在 or 不一致のリクエストは Cloud Functions 起動前に API Gateway で弾く。
 
 一方、API Key が漏洩した場合や正規の外形監視が高頻度で叩く場合は Cloud Functions の起動課金が発生し得るため、必要に応じて **Cloudflare 側でも吸収する**。
 
 | 対策 | 内容 |
 |------|------|
-| Rate Limiting Rule | `/healthz` 専用に例 60 req/min/IP |
-| Cache Rule         | `/healthz` レスポンスを Edge で 10〜30秒キャッシュし、origin リクエストを減らす |
+| Rate Limiting Rule | `/health` 専用に例 60 req/min/IP |
+| Cache Rule         | `/health` レスポンスを Edge で 10〜30秒キャッシュし、origin リクエストを減らす |
 
-無料 Rate Limiting Rule は1個しか使えないため、`/v1/search` 等の重いエンドポイントと `/healthz` のどちらに割り当てるかは Cloudflare 側 (`home-raspi-iac/terraform/cloudflare/`) の作業時に確定する。Cache Rule を使う場合は、API Key 必須の前提を壊さないように cache key / 対象クライアントを慎重に設計する。
+無料 Rate Limiting Rule は1個しか使えないため、`/v1/search` 等の重いエンドポイントと `/health` のどちらに割り当てるかは Cloudflare 側 (`home-raspi-iac/terraform/cloudflare/`) の作業時に確定する。Cache Rule を使う場合は、API Key 必須の前提を壊さないように cache key / 対象クライアントを慎重に設計する。
 
 **管理場所**: 本リポジトリでは管理しない。Cloudflare ゾーン (`riri-inferno.com`) は [home-raspi-iac](https://github.com/Riri-Inferno/home-raspi-iac) の `terraform/cloudflare/` で一元管理しているため、WAF/Rate Limit ルールもそちらに追加する。
 

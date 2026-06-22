@@ -1,6 +1,6 @@
 """Healthz Cloud Function.
 
-ADR 0005 の判断に従い、外形監視で叩かれる /healthz を独立した最小依存の
+ADR 0005 の判断に従い、外形監視で叩かれる /health を独立した最小依存の
 Cloud Function として切り出す。重い SDK (genai / firestore) を読み込まない
 ことでコールドスタートを最小化する。
 """

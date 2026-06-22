@@ -1,6 +1,6 @@
 # Cloud Functions Gen2 デプロイ (ADR 0005 の関数分割粒度に従う)。
 #
-#   - healthz       : GET /healthz 専用、最小依存・最小メモリ
+#   - healthz       : GET /health 専用、最小依存・最小メモリ
 #   - vector-api    : POST /v1/documents, POST /v1/search、genai + Firestore
 #
 # ローカル動作確認は functions/README.md 参照。

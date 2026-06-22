@@ -15,7 +15,8 @@ import os
 import uuid
 
 import functions_framework
-from flask import jsonify
+import json
+from flask import Response
 from google import genai
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
@@ -66,13 +67,17 @@ def get_firestore_client() -> firestore.Client:
 
 
 # ---------------------------------------------------------------------------
-# Error helper
+# Response helpers
 # ---------------------------------------------------------------------------
+def _json(data: dict, status: int = 200, content_type: str = "application/json") -> Response:
+    return Response(json.dumps(data, ensure_ascii=False), status=status, content_type=content_type)
+
+
 def problem(type_slug: str, title: str, status: int, detail: str | None = None):
     body = Problem(type=type_slug, title=title, status=status, detail=detail).model_dump(
         exclude_none=True
     )
-    return jsonify(body), status, {"Content-Type": "application/problem+json"}
+    return _json(body, status, "application/problem+json")
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +134,7 @@ def handle_create_document(request):
         metadata=payload.metadata,
         created_at=saved.create_time,
     ).model_dump(mode="json", exclude_none=True)
-    return jsonify(response), 201
+    return _json(response, 201)
 
 
 def handle_search(request):
@@ -175,7 +180,7 @@ def handle_search(request):
         )
 
     response = SearchResponse(results=results).model_dump(mode="json", exclude_none=True)
-    return jsonify(response), 200
+    return _json(response, 200)
 
 
 # ---------------------------------------------------------------------------

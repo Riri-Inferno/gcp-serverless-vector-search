@@ -19,13 +19,5 @@ def main(request):
         }
         return jsonify(body), 405, {"Content-Type": "application/problem+json"}
 
-    normalized_path = request.path.rstrip("/") or "/"
-    if normalized_path != "/healthz":
-        body = {
-            "type": "not_found",
-            "title": "Not Found",
-            "status": 404,
-        }
-        return jsonify(body), 404, {"Content-Type": "application/problem+json"}
-
     return jsonify({"status": "ok"}), 200
+

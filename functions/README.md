@@ -6,7 +6,7 @@
 
 | ディレクトリ | 担当ルート | 依存ライブラリ | 用途 |
 |--------------|------------|----------------|------|
-| `healthz/`    | `GET /healthz` / `GET /healthz/`            | functions-framework / flask                              | ヘルスチェック (低レイテンシ / 重い SDK 不要) |
+| `healthz/`    | `GET /healthz`                              | functions-framework / flask                              | ヘルスチェック (低レイテンシ / 重い SDK 不要) |
 | `vector-api/` | `POST /v1/documents` / `POST /v1/search`    | + pydantic / google-genai / google-cloud-firestore        | 埋め込み生成と Firestore ベクトル検索        |
 
 API 仕様は [`api/openapi.yaml`](../api/openapi.yaml) を契約とする。
@@ -28,7 +28,6 @@ functions-framework --target=main --port=8080
 
 ```bash
 curl http://localhost:8080/healthz
-curl http://localhost:8080/healthz/
 curl -X POST http://localhost:8080/v1/documents \
   -H 'Content-Type: application/json' \
   -d '{"text": "Pythonの非同期処理について", "metadata": {"category": "tech"}}'

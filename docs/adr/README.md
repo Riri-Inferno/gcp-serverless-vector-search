@@ -15,7 +15,7 @@
 ## このリポジトリでの運用ルール
 
 - ファイル名は `NNNN-kebab-case-title.md`（連番）
-- **一度 Accepted になった ADR は書き換えない**。方針を変える場合は新しい ADR を起こし、古い ADR の `Status` を `Superseded by NNNN` に更新する
+- **一度 Accepted になった ADR 本文は削除・編集しない**。方針を変える場合は新しい ADR を起こし、supersede 関係は新 ADR とこの index で示す
 - 相互依存の強い決定は1ファイルにまとめて構わない（例: API MVP 設計セット）
 
 ## インデックス
@@ -31,4 +31,5 @@
 | [0007](0007-sops-path-regex-fix.md) | `.sops.yaml` の `path_regex` を素ファイルにマッチさせる (0006 訂正) | Accepted |
 | [0008](0008-healthz-api-key-required.md) | `/healthz` も API Key 必須に変更 (0001 訂正、GCP API Gateway 制約) | Accepted |
 | [0009](0009-public-api-hostname.md) | 公開 API ホスト名を `vector-search.riri-inferno.com` に変更 (0001 補足) | Accepted |
-| [0010](0010-healthz-trailing-slash-compatibility.md) | `/healthz` と `/healthz/` を両方受ける (0008 補足) | Accepted |
+| [0010](0010-healthz-trailing-slash-compatibility.md) | `/healthz` と `/healthz/` を両方受ける (0008 補足) | Accepted (superseded by 0011) |
+| [0011](0011-healthz-canonical-path.md) | `/healthz` を canonical health check path とする (0010 差し戻し) | Accepted |

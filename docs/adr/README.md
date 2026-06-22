@@ -35,3 +35,4 @@
 | [0011](0011-healthz-canonical-path.md) | `/healthz` を canonical health check path とする (0010 差し戻し) | Accepted (superseded by 0012) |
 | [0012](0012-healthz-wildcard-path-routing.md) | `/{healthz_path}` wildcard で healthz を routing する (0011 差し戻し) | Accepted (superseded by 0013) |
 | [0013](0013-rename-healthz-path-to-health.md) | health check パスを `/healthz` から `/health` に変更する (0012 差し戻し) | Accepted |
+| [0014](0014-cloudflare-worker-host-rewrite.md) | Cloudflare Worker で Host ヘッダを書き換えてカスタムドメインを GCP API Gateway に接続する | Accepted |

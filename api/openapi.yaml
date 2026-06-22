@@ -28,14 +28,14 @@ servers:
 
 x-google-api-management:
   backends:
-    # healthz は backend root に直接アクセスする。path_translation は backend への
-    # 転送 URL だけを制御し、Gateway の operation path matching には影響しない点に注意。
-    # CONSTANT_ADDRESS の転送先 path を明確にするため、backend address は root slash
-    # 付きにする。API Gateway の path template は末尾 slash の literal path を受け付けない。
-    # healthz Cloud Function は path 無視で 200 を返す実装なので、CONSTANT_ADDRESS で問題なし。
+    # healthz は API Gateway の single wildcard path template で受ける。
+    # 公式仕様上、single wildcard は末尾 slash の有無を許容するため、
+    # `/healthz` と `/healthz/` の両方を Gateway で同じ operation に流せる。
+    # APPEND_PATH_TO_ADDRESS で backend に実 path を渡し、Cloud Function 側で
+    # `/healthz` 以外を 404 にする。
     healthz_backend:
-      address: ${healthz_url}/
-      path_translation: CONSTANT_ADDRESS
+      address: ${healthz_url}
+      path_translation: APPEND_PATH_TO_ADDRESS
       jwt_audience: ${healthz_url}
     # vector_api は path で operation を分岐するため APPEND が必須。
     vector_api_backend:
@@ -198,10 +198,17 @@ components:
 
 paths:
 
-  /healthz:
+  /{healthz_path}:
     get:
       summary: 死活監視
       operationId: healthz
+      parameters:
+        - name: healthz_path
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [healthz]
       # GCP API Gateway は API Key 認証を持たない operation を service config に
       # 含めない仕様のため、global security (X-API-Key) を継承する (ADR 0008)。
       x-google-backend: healthz_backend

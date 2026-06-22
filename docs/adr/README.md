@@ -32,4 +32,5 @@
 | [0008](0008-healthz-api-key-required.md) | `/healthz` も API Key 必須に変更 (0001 訂正、GCP API Gateway 制約) | Accepted |
 | [0009](0009-public-api-hostname.md) | 公開 API ホスト名を `vector-search.riri-inferno.com` に変更 (0001 補足) | Accepted |
 | [0010](0010-healthz-trailing-slash-compatibility.md) | `/healthz` と `/healthz/` を両方受ける (0008 補足) | Accepted (superseded by 0011) |
-| [0011](0011-healthz-canonical-path.md) | `/healthz` を canonical health check path とする (0010 差し戻し) | Accepted |
+| [0011](0011-healthz-canonical-path.md) | `/healthz` を canonical health check path とする (0010 差し戻し) | Accepted (superseded by 0012) |
+| [0012](0012-healthz-wildcard-path-routing.md) | `/{healthz_path}` wildcard で healthz を routing する (0011 差し戻し) | Accepted |

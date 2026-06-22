@@ -19,5 +19,13 @@ def main(request):
         }
         return jsonify(body), 405, {"Content-Type": "application/problem+json"}
 
-    # API Gateway 経由でも直叩きでも動くように、path は厳格に固定しない。
+    normalized_path = request.path.rstrip("/") or "/"
+    if normalized_path != "/healthz":
+        body = {
+            "type": "not_found",
+            "title": "Not Found",
+            "status": 404,
+        }
+        return jsonify(body), 404, {"Content-Type": "application/problem+json"}
+
     return jsonify({"status": "ok"}), 200

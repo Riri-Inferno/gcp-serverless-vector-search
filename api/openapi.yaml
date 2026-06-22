@@ -15,7 +15,7 @@ info:
     name: riri-vector-lab-2026
 
 servers:
-  - url: https://vector-search.api.riri-inferno.com
+  - url: https://vector-search.riri-inferno.com
     description: 本番エンドポイント (Cloudflare 経由 / API Gateway へプロキシ)
 
 # 本ファイルは Terraform の templatefile() で読まれる「テンプレート」を兼ねている。

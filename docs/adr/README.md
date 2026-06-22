@@ -30,3 +30,4 @@
 | [0006](0006-secret-management-sops-kms.md) | シークレット管理は SOPS + Cloud KMS で暗号化して git に置く | Accepted |
 | [0007](0007-sops-path-regex-fix.md) | `.sops.yaml` の `path_regex` を素ファイルにマッチさせる (0006 訂正) | Accepted |
 | [0008](0008-healthz-api-key-required.md) | `/healthz` も API Key 必須に変更 (0001 訂正、GCP API Gateway 制約) | Accepted |
+| [0009](0009-public-api-hostname.md) | 公開 API ホスト名を `vector-search.riri-inferno.com` に変更 (0001 補足) | Accepted |

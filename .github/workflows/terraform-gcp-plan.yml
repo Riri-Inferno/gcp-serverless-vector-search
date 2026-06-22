@@ -3,6 +3,7 @@ name: terraform-gcp-plan
 on:
   pull_request:
     paths:
+      - 'api/**'
       - 'terraform/gcp/**'
       - 'terraform/.terraform-version'
       - 'functions/**'

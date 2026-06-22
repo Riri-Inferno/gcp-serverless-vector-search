@@ -28,9 +28,9 @@ servers:
 
 x-google-api-management:
   backends:
-    # healthz は backend root に直接アクセス。Gateway path (/healthz / /healthz/ etc) は捨てる。
-    # APPEND_PATH_TO_ADDRESS だと末尾スラッシュ有無で API Gateway の path matching が
-    # 揺らぎ /healthz (slash なし) で 404 が返る現象があったため。
+    # healthz は backend root に直接アクセスする。path_translation は backend への
+    # 転送 URL だけを制御し、Gateway の operation path matching には影響しない点に注意。
+    # Gateway 側で match させる canonical path は OpenAPI paths の `/healthz`。
     # healthz Cloud Function は path 無視で 200 を返す実装なので、CONSTANT_ADDRESS で問題なし。
     healthz_backend:
       address: ${healthz_url}

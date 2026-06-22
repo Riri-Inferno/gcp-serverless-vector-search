@@ -34,7 +34,7 @@ flowchart TD
 | 対策 | 内容 | プラン |
 |------|------|--------|
 | Custom Rules | 特定IP/国/User-Agentの遮断 | 無料（5ルールまで） |
-| Rate Limiting Rule | 例: `/v1/search` を 1分間30リクエスト/IP に制限 | 無料（1ルールまで） |
+| Rate Limiting Rule | `/v1/search` を 10秒間5リクエスト/IP に制限（Free プランは period=10秒のみ対応） | 無料（1ルールまで） |
 | Bot Fight Mode | 簡易ボット対策 | 無料 |
 | DDoS Protection | ネットワーク/トランスポート層 DDoS は標準で常時有効 | 無料 |
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | 対策 | 内容 |
 |------|------|
-| Rate Limiting Rule | `/health` 専用に例 60 req/min/IP |
+| Rate Limiting Rule | Free プランは `/v1/search` に割り当て済み（1ルール上限のため `/health` は対象外） |
 | Cache Rule         | `/health` レスポンスを Edge で 10〜30秒キャッシュし、origin リクエストを減らす |
 
 無料 Rate Limiting Rule は1個しか使えないため、`/v1/search` 等の重いエンドポイントと `/health` のどちらに割り当てるかは Cloudflare 側 (`home-raspi-iac/terraform/cloudflare/`) の作業時に確定する。Cache Rule を使う場合は、API Key 必須の前提を壊さないように cache key / 対象クライアントを慎重に設計する。

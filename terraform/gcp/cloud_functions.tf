@@ -146,8 +146,9 @@ resource "google_cloudfunctions2_function" "vector_api" {
   }
 
   service_config {
-    # 動画 (最大 80s) や音声 (最大 180s) を GCS からインメモリ展開するため 1Gi に増量。
-    # テキスト専用時は 512Mi で十分だったが、マルチモーダル対応で上限を引き上げる。
+    # 1Gi メモリには 0.333 vCPU では不足 (Cloud Run 制約: 0.333 vCPU は最大 512Mi)。
+    # 動画 (最大 80s) や音声 (最大 180s) を GCS からインメモリ展開するため 1 vCPU / 1Gi に設定。
+    available_cpu         = "1"
     available_memory      = "1Gi"
     timeout_seconds       = 120
     max_instance_count    = 3 # docs/security.md D5 の物理キャップ

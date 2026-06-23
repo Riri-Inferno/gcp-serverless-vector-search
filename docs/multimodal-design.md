@@ -126,7 +126,7 @@ sequenceDiagram
 
 **マルチモーダル検索が成立する仕組み**
 
-Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の1536次元ベクトル空間**に射影する。
+Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の1536次元ベクトル空間(次元数は設定可能)**に射影する。
 登録時に `Part.from_uri()` で画像を埋め込んでいるため、「夕焼けの写真」というテキストクエリと、画像から生成されたベクトルが近傍に来る。
 
 ---
@@ -334,10 +334,10 @@ ALLOWED_CONTENT_TYPES = {
 
 ## 関連リソース
 
-| リソース               | 場所                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| GCS バケット Terraform | [`terraform/gcp/media_bucket.tf`](../terraform/gcp/media_bucket.tf)                    |
-| Cloud Functions 実装   | [`functions/vector-api/`](../functions/vector-api/)                                     |
-| OpenAPI 仕様           | [`api/openapi.yaml`](../api/openapi.yaml)                                               |
-| セキュリティ方針       | [`docs/security.md`](security.md)                                                       |
-| API MVP 設計           | [`docs/adr/0001-api-design-mvp.md`](adr/0001-api-design-mvp.md)                        |
+| リソース               | 場所                                                                |
+| ---------------------- | ------------------------------------------------------------------- |
+| GCS バケット Terraform | [`terraform/gcp/media_bucket.tf`](../terraform/gcp/media_bucket.tf) |
+| Cloud Functions 実装   | [`functions/vector-api/`](../functions/vector-api/)                 |
+| OpenAPI 仕様           | [`api/openapi.yaml`](../api/openapi.yaml)                           |
+| セキュリティ方針       | [`docs/security.md`](security.md)                                   |
+| API MVP 設計           | [`docs/adr/0001-api-design-mvp.md`](adr/0001-api-design-mvp.md)     |

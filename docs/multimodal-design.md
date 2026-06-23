@@ -32,7 +32,7 @@ flowchart TD
     Client -->|Content-Type ヘッダ付き PUT| GCS
     Client -->|X-API-Key + gcs_uri + text| GW2 --> Fn2
     Fn2 -- "Part.from_uri(gcs_uri) + text?" --> Gemini
-    Gemini -->|3072次元ベクトル| Fn2
+    Gemini -->|2048次元ベクトル| Fn2
     Fn2 -->|embedding + gcs_uri + text| FS
 
     style Step1 fill:#dbeafe,stroke:#1e40af
@@ -96,7 +96,7 @@ sequenceDiagram
     C->>Fn: POST /v1/documents<br/>{"gcs_uri":"gs://...","text":"任意","metadata":{}}
     Fn->>Fn: text / gcs_uri の存在チェック<br/>(少なくとも一方が必須)
     Fn->>Gemini: embed_content(<br/>  contents=[text?, Part.from_uri(gcs_uri)?],<br/>  task_type="RETRIEVAL_DOCUMENT"<br/>)
-    Gemini-->>Fn: vector[3072]
+    Gemini-->>Fn: vector[2048]
     Fn->>FS: documents.add({<br/>  embedding, text, gcs_uri, metadata<br/>})
     FS-->>Fn: document id
     Fn-->>C: 201 Created {"id":...}
@@ -117,7 +117,7 @@ sequenceDiagram
 
     C->>Fn: POST /v1/search<br/>{"query":"夕焼けの写真","top_k":10}
     Fn->>Gemini: embed_content(<br/>  contents=[query],<br/>  task_type="RETRIEVAL_QUERY"<br/>)
-    Gemini-->>Fn: query_vector[3072]
+    Gemini-->>Fn: query_vector[2048]
     Fn->>FS: find_nearest(<br/>  query_vector,<br/>  distance_type=COSINE,<br/>  limit=top_k<br/>)
     FS-->>Fn: [{id, embedding, text, gcs_uri, metadata, distance}]
     Fn->>Fn: score = 1 - distance
@@ -126,7 +126,7 @@ sequenceDiagram
 
 **マルチモーダル検索が成立する仕組み**
 
-Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の3072次元ベクトル空間(次元数は設定可能)**に射影する。
+Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の2048次元ベクトル空間(次元数は設定可能)**に射影する。
 登録時に `Part.from_uri()` で画像を埋め込んでいるため、「夕焼けの写真」というテキストクエリと、画像から生成されたベクトルが近傍に来る。
 
 ---
@@ -218,7 +218,7 @@ documents/{uuid}:
   text:       string | null        # テキストのみ / テキスト+メディア登録時に存在
   gcs_uri:    string | null        # メディア登録時に存在 (gs://bucket/inputs/uuid.ext)
   metadata:   object               # 自由形式（既存）
-  embedding:  vector(3072)         # Gemini gemini-embedding-2 の出力
+  embedding:  vector(2048)         # Gemini gemini-embedding-2 の出力
   // createTime / updateTime は Firestore が自動付与
 ```
 

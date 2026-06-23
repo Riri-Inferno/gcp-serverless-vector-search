@@ -146,11 +146,17 @@ resource "google_cloudfunctions2_function" "vector_api" {
   }
 
   service_config {
-    available_memory      = "512Mi"
-    timeout_seconds       = 60
+    # 動画 (最大 80s) や音声 (最大 180s) を GCS からインメモリ展開するため 1Gi に増量。
+    # テキスト専用時は 512Mi で十分だったが、マルチモーダル対応で上限を引き上げる。
+    available_memory      = "1Gi"
+    timeout_seconds       = 120
     max_instance_count    = 3 # docs/security.md D5 の物理キャップ
     service_account_email = google_service_account.vector_api_runtime.email
     ingress_settings      = "ALLOW_ALL"
+
+    environment_variables = {
+      MEDIA_BUCKET = google_storage_bucket.media_bucket.name
+    }
 
     # GEMINI_API_KEY は Secret Manager 経由で env として注入する (ADR 0006)
     secret_environment_variables {
@@ -165,5 +171,6 @@ resource "google_cloudfunctions2_function" "vector_api" {
     google_project_service.app_required,
     google_secret_manager_secret_version.gemini_api_key,
     google_secret_manager_secret_iam_member.vector_api_gemini_key_accessor,
+    google_storage_bucket.media_bucket,
   ]
 }

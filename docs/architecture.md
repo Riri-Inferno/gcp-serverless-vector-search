@@ -6,7 +6,11 @@
 
 ---
 
-## 全体構成図
+## システムアーキテクチャ（高位構成図）
+
+![System Architecture](images/architecture.png)
+
+## 処理フロー
 
 ```mermaid
 flowchart LR

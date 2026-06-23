@@ -2,7 +2,7 @@
 #
 # ADR 0001 で確定した仕様:
 #   - コレクション: documents
-#   - ベクトルフィールド: embedding (3072次元)
+#   - ベクトルフィールド: embedding (2048次元)
 #   - 距離関数: COSINE (find_nearest 実行時にクエリ側で指定)
 #   - 索引タイプ: FLAT (Firestore のベクトル検索は KNN flat 走査)
 #
@@ -23,7 +23,7 @@ resource "google_firestore_database" "default" {
 }
 
 # ベクトル検索用インデックス。`documents` コレクションの `embedding` フィールドに対する
-# インデックスを 3072次元・FLAT 走査で定義する。
+# インデックスを 2048次元・FLAT 走査で定義する。
 #
 # 仕様メモ:
 #   - Firestore の Vector Index は `__name__` (ASCENDING) フィールドを **明示的に** 含めるのが
@@ -47,7 +47,7 @@ resource "google_firestore_index" "documents_embedding" {
   fields {
     field_path = "embedding"
     vector_config {
-      dimension = 3072
+      dimension = 2048
       flat {}
     }
   }

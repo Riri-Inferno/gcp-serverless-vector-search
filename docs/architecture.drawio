@@ -1,0 +1,120 @@
+<mxGraphModel dx="1422" dy="762" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- ========== 背景ゾーン (plain rectangles, not swimlanes) ========== -->
+    <mxCell id="bg_ext" value="外部" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontStyle=1;fontSize=13;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="10" y="10" width="200" height="590" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="bg_cf" value="Cloudflare" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#7d4e00;fontStyle=1;fontSize=13;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="220" y="10" width="190" height="590" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="bg_gcp" value="Google Cloud Platform" style="rounded=1;whiteSpace=wrap;fillColor=#e8f4fb;strokeColor=#4285f4;fontColor=#1a73e8;fontStyle=1;fontSize=13;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="420" y="10" width="870" height="590" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="bg_ai" value="Google AI" style="rounded=1;whiteSpace=wrap;fillColor=#fce4ec;strokeColor=#c62828;fontColor=#b71c1c;fontStyle=1;fontSize=13;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="1300" y="10" width="190" height="590" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== Client ========== -->
+    <mxCell id="client" value="クライアント&#xa;Browser / CLI" style="shape=mxgraph.cisco.computers_and_peripherals.pc;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+      <mxGeometry x="65" y="265" width="60" height="48" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== Cloudflare Worker ========== -->
+    <mxCell id="cf" value="Cloudflare Worker&#xa;Host Header Rewrite&#xa;ADR-0014" style="rounded=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;align=center;" vertex="1" parent="1">
+      <mxGeometry x="240" y="255" width="150" height="70" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== API Gateway (Apigee icon) ========== -->
+    <mxCell id="apigw" value="API Gateway&#xa;X-API-Key Auth&#xa;ADR-0003" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIwLjE4MDIzMTA5NDM2MDM1IiBoZWlnaHQ9IjIwLjE4MDIwODIwNjE3Njc1OCIgdmlld0JveD0iLTAuMDAwMTE1MTY1MTIzMTMzOTIwMTMgLTAuMDAwMTAzMzQ0NDkzMjU0NTUzNTMgMjAuMTgwMjMxMDk0MzYwMzUgMjAuMTgwMjA4MjA2MTc2NzU4Ij48c3R5bGUgdHlwZT0idGV4dC9jc3MiPi5zdDB7ZmlsbDojNjY5ZGY2O2ZpbGwtcnVsZTpldmVub2RkfS5zdDF7ZmlsbC1ydWxlOmV2ZW5vZGQ7ZmlsbDojNDI4NWY0fTwvc3R5bGU+PHBhdGggY2xhc3M9InN0MCIgZD0iTTMuMjkgMTAuMDlsMS4zMi0xLjMyLTEuNzktMS43OWEyLjk0IDIuOTQgMCAwIDEgMi4wOC01IDIuOTIgMi45MiAwIDAgMSAyLjA3Ljg2bDEuOCAxLjc5IDEuMzItMS4zNEw4LjMgMS41YTQuODEgNC44MSAwIDEgMC02LjggNi44em0xMy42IDBsLTEuMzIgMS4zMiAxLjc5IDEuOGEyLjk0IDIuOTQgMCAwIDEtNC4xNiA0LjE1bC0xLjc5LTEuNzktMS4zMiAxLjMyIDEuNzkgMS43OWE0LjgxIDQuODEgMCAxIDAgNi44LTYuOHoiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNNi45OCAxNy4zNmEyLjk0IDIuOTQgMCAxIDEtNC4xNi00LjE2bDEuNzktMS43OSA0LjE2IDQuMTZ6bTYuMjMtMTQuNTRhMi45MyAyLjkzIDAgMCAxIDUgMi4wOCAzIDMgMCAwIDEtLjg2IDIuMDhsLTEuNzkgMS43OS00LjE1LTQuMTZ6bS0zLjEyIDEwLjQ2YTMuMiAzLjIgMCAwIDEtMy4xOS0zLjE5aDBhMy4yMSAzLjIxIDAgMCAxIDMuMTktMy4xOWgwYTMuMjEgMy4yMSAwIDAgMSAzLjE5IDMuMTloMGEzLjIgMy4yIDAgMCAxLTMuMTkgMy4xOXptNi44LTMuMTlsMS43OS0xLjc5QTQuODEgNC44MSAwIDAgMCAxNi41NzQuMTUzIDQuODEgNC44MSAwIDAgMCAxMS44OCAxLjVsLTEuNzkgMS43OS02LjggNi44LTEuNzkgMS43OWE0LjgxIDQuODEgMCAwIDAgMi4xMDYgOC4xNDdBNC44MSA0LjgxIDAgMCAwIDguMyAxOC42OGwxLjc5LTEuNzl6Ii8+PC9zdmc+;" vertex="1" parent="1">
+      <mxGeometry x="440" y="255" width="165" height="70" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== healthz (Cloud Functions icon) ========== -->
+    <mxCell id="hz" value="healthz&#xa;GET /health&#xa;128Mi / 10s" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIwIiBoZWlnaHQ9IjE5Ljk5IiB2aWV3Qm94PSIwIDAgMjAgMTkuOTkiPjxzdHlsZT4uc3Qwe2ZpbGw6IzQyODVmNH0uc3Qxe2ZpbGw6IzY2OWRmNn0uc3Qye2ZpbGw6I2FlY2JmYX08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zIDMuOTlMMCA2LjQydjcuMTNsMyAyLjQ0eiIvPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0zIDMuOTlsLTMgNCAzLTJ6bS0zIDhsMyA0di0yeiIvPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0wIDE1Ljk5bDQgNCAyLTItNi02em0uMDEtOEw1Ljk5IDJsLTItMkwwIDMuOTl6Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTE3IDE2bDMtMi40MlY2LjQ0TDE3IDR6Ii8+PHBhdGggY2xhc3M9InN0MCIgZD0iTTE3IDE2bDMtNC0zIDJ6bTMtOGwtMy00djJ6Ii8+PGcgY2xhc3M9InN0MiI+PHBhdGggZD0iTTIwIDRsLTQtNC0yIDIgNiA2em0tLjAxIDhsLTUuOTggNS45OSAyIDJMMjAgMTZ6Ii8+PGNpcmNsZSBjeD0iNiIgY3k9IjkuOTkiIHI9IjEiLz48Y2lyY2xlIGN4PSIxMCIgY3k9IjkuOTkiIHI9IjEiLz48Y2lyY2xlIGN4PSIxMy45OSIgY3k9IjkuOTkiIHI9IjEiLz48L2c+PC9zdmc+;" vertex="1" parent="1">
+      <mxGeometry x="660" y="80" width="155" height="70" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== vector-api (Cloud Functions icon) ========== -->
+    <mxCell id="va" value="vector-api&#xa;POST /v1/documents&#xa;POST /v1/documents/upload-url&#xa;POST /v1/search&#xa;1Gi / 120s" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIwIiBoZWlnaHQ9IjE5Ljk5IiB2aWV3Qm94PSIwIDAgMjAgMTkuOTkiPjxzdHlsZT4uc3Qwe2ZpbGw6IzQyODVmNH0uc3Qxe2ZpbGw6IzY2OWRmNn0uc3Qye2ZpbGw6I2FlY2JmYX08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zIDMuOTlMMCA2LjQydjcuMTNsMyAyLjQ0eiIvPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0zIDMuOTlsLTMgNCAzLTJ6bS0zIDhsMyA0di0yeiIvPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0wIDE1Ljk5bDQgNCAyLTItNi02em0uMDEtOEw1Ljk5IDJsLTItMkwwIDMuOTl6Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTE3IDE2bDMtMi40MlY2LjQ0TDE3IDR6Ii8+PHBhdGggY2xhc3M9InN0MCIgZD0iTTE3IDE2bDMtNC0zIDJ6bTMtOGwtMy00djJ6Ii8+PGcgY2xhc3M9InN0MiI+PHBhdGggZD0iTTIwIDRsLTQtNC0yIDIgNiA2em0tLjAxIDhsLTUuOTggNS45OSAyIDJMMjAgMTZ6Ii8+PGNpcmNsZSBjeD0iNiIgY3k9IjkuOTkiIHI9IjEiLz48Y2lyY2xlIGN4PSIxMCIgY3k9IjkuOTkiIHI9IjEiLz48Y2lyY2xlIGN4PSIxMy45OSIgY3k9IjkuOTkiIHI9IjEiLz48L2c+PC9zdmc+;" vertex="1" parent="1">
+      <mxGeometry x="660" y="290" width="170" height="105" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== Firestore (icon) ========== -->
+    <mxCell id="fs" value="Firestore&#xa;documents&#xa;2048-dim COSINE&#xa;ADR-0001" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjMyMy45IiBoZWlnaHQ9IjM3Ni40IiB2aWV3Qm94PSItMC4xIDAuMyA4NS43IDk5LjYiPjxzdHlsZT4uc3Qwe2ZpbGw6I2FlY2JmYX0uc3Qxe2ZpbGw6IzY2OWRmNn0uc3Qye2ZpbGw6IzQyODVmNH08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0tLjEgNzUuOFY1NS45bDQyLjktMjAuMnYxOS4xem0wLTM1LjRWMjAuNUw0Mi43LjN2MTkuMXoiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNODUuNiA3NS44VjU1LjlsLTQyLjktMjAuMnYxOS4xem0wLTM1LjRWMjAuNUw0Mi43LjN2MTkuMXoiLz48cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDIuNyA4MC4zbDE2LjItNy41IDIxLjEgOS43LTM3LjMgMTcuNHoiLz48L3N2Zz4=;" vertex="1" parent="1">
+      <mxGeometry x="890" y="80" width="170" height="90" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== GCS media (Cloud Storage icon) ========== -->
+    <mxCell id="gcs" value="GCS media-inputs&#xa;inputs/{uuid}.ext&#xa;30日 TTL&#xa;ADR-0017" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIwIiBoZWlnaHQ9IjE2IiB2aWV3Qm94PSIwIDAgMjAgMTYiPjxzdHlsZT4uc3Qwe2ZpbGw6IzQyODVmNH0uc3Qxe2ZpbGw6IzY2OWRmNn0uc3Qye2ZpbGw6I2FlY2JmYX0uc3Qze2ZpbGw6I2ZmZn08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0wIDBoMjB2N0gweiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xOCAwaDF2N2gtMXoiLz48cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTggN2wyLTdoLTJ6Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTAgMGgxdjdIMHoiLz48ZyBjbGFzcz0ic3QzIj48cGF0aCBkPSJNNCAzaDZ2MUg0eiIvPjxyZWN0IHg9IjEzIiB5PSIyIiB3aWR0aD0iMyIgaGVpZ2h0PSIzIiByeD0iMS41Ii8+PC9nPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0wIDloMjB2N0gweiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xOCA5aDF2N2gtMXoiLz48cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTggMTZsMi03aC0yeiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0wIDloMXY3SDB6Ii8+PGcgY2xhc3M9InN0MyI+PHBhdGggZD0iTTQgMTJoNnYxSDR6Ii8+PHJlY3QgeD0iMTMiIHk9IjExIiB3aWR0aD0iMyIgaGVpZ2h0PSIzIiByeD0iMS41Ii8+PC9nPjwvc3ZnPg==;" vertex="1" parent="1">
+      <mxGeometry x="890" y="310" width="170" height="90" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== Secret Manager (KMS shield+key icon) ========== -->
+    <mxCell id="sm" value="Secret Manager&#xa;GEMINI_API_KEY&#xa;ADR-0006" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=52;image;imageWidth=32;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjMxMC44IiBoZWlnaHQ9IjM3Ny45IiB2aWV3Qm94PSItMC4xIC0wLjUgODIuMiAxMDAiPjxzdHlsZT4uc3Qwe2ZpbGw6IzQyODVmNH0uc3Qxe2ZpbGw6IzY2OWRmNn0uc3Qye2ZpbGw6I2ZmZn08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00MSAwbDQxLjEgMTcuNXYyOS43YzAgMjcuNC0yNC42IDUwLjgtNDEuMSA1Mi44eiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik00MSAwTC4xIDE3djI5LjdjMCAyNy40IDI0LjYgNTAuOCA0MS4xIDUyLjh6Ii8+PHBhdGggY2xhc3M9InN0MiIgZD0iTTQxLjMgMTYuNmMtOS42IDAtMTcuNCA3LjktMTcuNCA0LjQgMCA4LjEgNS42IDE0LjkgMTMuMSAxNi45djkuNWgtOS44djguN2g5Ljh2NS40aC02LjN2OC43aDYuM3YyLjJoOC43VjUwLjljMTEuOS0yIDEzLjEtMTIuMiAxMy4xLTE2LjkgMC05LjYtNy45LTE3LjQtMTcuNS0xNy40em0wIDguN2E4LjcgOC43IDAgMSAxIDAgMTcuNCA4LjcgOC43IDAgMCAxIDAtMTcuNHoiLz48L3N2Zz4=;" vertex="1" parent="1">
+      <mxGeometry x="890" y="460" width="170" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== Gemini (AI Platform icon) ========== -->
+    <mxCell id="gemini" value="Gemini Embedding API&#xa;gemini-embedding-2&#xa;2048-dim&#xa;ADR-0016" style="rounded=1;whiteSpace=wrap;fillColor=#fce4ec;strokeColor=#c62828;fontStyle=1;fontSize=10;align=left;spacingLeft=52;image;imageWidth=38;imageHeight=38;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIwIiBoZWlnaHQ9IjE3LjUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iMCAwIDIwIDE3LjUiPjxzdHlsZT4uc3Qwe2ZpbGw6IzQyODVmNH0uc3Qxe2ZpbGw6IzY2OWRmNn08L3N0eWxlPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xOC45MSAxMC42M0wyMCA4Ljc1IDE3LjgyIDVoLTMuMDdsLTEuMDYtMS44NkgxMi41VjEuODhoMS45NGwxLjA2IDEuODdoMS41OUwxNC45IDBoLTQuMjd2NWgxLjczbC43MyAxLjI1aC0yLjQ2djIuNWgyLjI2bDEuMDUtMS44N2gyLjgxbC43MiAxLjI1aC0yLjhMMTMuNjIgMTBoLTIuOTl2NC4zOGgzLjRsLS43MiAxLjI1aC0yLjY4djEuODdoNC4yN2wzLjI4LTUuNjJoLTIuMDlsLS43MyAxLjI1SDEyLjV2LTEuMjVoMi4xNGwuNzQtMS4yNXoiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNMS4wOSAxMC42M0wwIDguNzUgMi4xOCA1aDMuMDdsMS4wNi0xLjg2SDcuNVYxLjg4SDUuNTZMNC41IDMuNzVIMi45MUw1LjEgMGg0LjI4djVINy42NGwtLjczIDEuMjVoMi40N3YyLjVINy4xMUw2LjA2IDYuODhIMy4yNWwtLjcyIDEuMjVoMi44TDYuMzggMTBoM3Y0LjM4SDUuOTdsLjcyIDEuMjVoMi42OXYxLjg3SDUuMWwtMy4yOC01LjYyaDIuMDlsLjczIDEuMjVINy41di0xLjI1SDUuMzZsLS43NC0xLjI1eiIvPjwvc3ZnPg==;" vertex="1" parent="1">
+      <mxGeometry x="1320" y="255" width="170" height="90" as="geometry"/>
+    </mxCell>
+
+    <!-- ========== エッジ ========== -->
+    <!-- client → cf -->
+    <mxCell id="e1" value="HTTPS + X-API-Key" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="client" target="cf" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- cf → apigw -->
+    <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cf" target="apigw" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- apigw → hz (up-right) -->
+    <mxCell id="e3" value="GET /health" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="apigw" target="hz" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- apigw → va (right, slightly down) -->
+    <mxCell id="e4" value="POST /v1/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="apigw" target="va" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- va → fs (right-up) -->
+    <mxCell id="e5" value="embedding 保存" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="va" target="fs" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- va → gcs (right) -->
+    <mxCell id="e6" value="Signed URL 発行 / DL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="va" target="gcs" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- va → sm (down, then right — goes below va and right to SM) -->
+    <mxCell id="e7" value="API Key 取得" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;exitX=1;exitY=0.9;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="va" target="sm" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- va → gemini (right) -->
+    <mxCell id="e8" value="embed_content&#xa;Part.from_bytes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="va" target="gemini" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- client → gcs (PUT binary): 下回りルート -->
+    <mxCell id="e9" value="③ PUT binary&#xa;直接アップロード" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9673a6;fontColor=#9673a6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" edge="1" source="client" target="gcs" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="95" y="610"/>
+          <mxPoint x="975" y="610"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+  </root>
+</mxGraphModel>

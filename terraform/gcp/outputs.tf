@@ -23,3 +23,8 @@ output "api_key" {
   sensitive   = true
 }
 
+output "media_bucket_name" {
+  value       = google_storage_bucket.media_bucket.name
+  description = "メディア保管用 GCS バケット名。バックエンドが gs:// URI を組み立てる際に参照する。"
+}
+

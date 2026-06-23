@@ -36,7 +36,7 @@ from models import (
 # 設定 (ADR 0001 / 0004 / 0005 で確定済みの値を hardcode)
 # ---------------------------------------------------------------------------
 EMBEDDING_MODEL = "gemini-embedding-2"
-EMBEDDING_DIMENSION = 1536
+EMBEDDING_DIMENSION = 3072
 COLLECTION = "documents"
 EMBEDDING_FIELD = "embedding"
 DISTANCE_RESULT_FIELD = "vector_distance"  # find_nearest が距離を書き込むフィールド名
@@ -84,7 +84,7 @@ def problem(type_slug: str, title: str, status: int, detail: str | None = None):
 # Embedding
 # ---------------------------------------------------------------------------
 def embed(text: str) -> list[float]:
-    """gemini-embedding-2 でテキストを 1536 次元ベクトルに変換する。"""
+    """gemini-embedding-2 でテキストを 3072 次元ベクトルに変換する。"""
     result = get_genai_client().models.embed_content(
         model=EMBEDDING_MODEL,
         contents=text,

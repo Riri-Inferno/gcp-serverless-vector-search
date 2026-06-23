@@ -290,23 +290,32 @@ flowchart LR
 | `filename`     | string | 必須 / 1文字以上                    |
 | `content_type` | string | 必須 / 許可リストで検証（下記参照） |
 
-**許可 MIME タイプ**（初期フェーズ）
+**許可 MIME タイプ**（gemini-embedding-2 の対応フォーマットに基づく）
 
 ```python
 ALLOWED_CONTENT_TYPES = {
+    # 画像（最大6枚 / リクエスト）
     "image/jpeg",
     "image/png",
     "image/webp",
-    "image/gif",
+    "image/bmp",
+    "image/heic",
+    "image/heif",
+    "image/avif",
+    # PDF（最大1ファイル・最大6ページ / リクエスト、OCR搭載）
+    "application/pdf",
+    # 動画（最大1本 / リクエスト、音声付き80秒・無音120秒まで）
+    "video/mp4",
+    "video/mpeg",
+    # 音声（最大1ファイル・最大180秒 / リクエスト）
     "audio/mp3",
-    "audio/mpeg",
     "audio/wav",
-    "audio/ogg",
-    "video/mp4",   # Gemini が対応する場合
 }
 ```
 
-リスト外の MIME タイプは 400 Validation Error。
+> 出典: [gemini-embedding-2 公式ドキュメント](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/embedding-2?hl=ja)
+
+リスト外の MIME タイプは 400 Validation Error。`image/gif` は gemini-embedding-2 の非対応のため除外。
 
 ### DocumentCreateRequest（拡張後）
 
@@ -324,7 +333,8 @@ ALLOWED_CONTENT_TYPES = {
 | 項目                    | 内容                                                                                                                                                                       |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 署名付き URL の有効期限 | 5分。期限切れ後に PUT すると GCS が 403 を返す（バックエンドは検知しない）                                                                                                 |
-| ファイルサイズ上限      | GCS 側は無制限だが、Gemini Embedding の入力上限に依存。大容量ファイルの埋め込みは失敗する可能性がある                                                                      |
+| 入力トークン上限        | gemini-embedding-2 の最大入力は **8,192 トークン**。テキストは文字数で 8,000 を上限としてバリデーションする（既存の制約と同一）                                            |
+| モダリティ上限          | 画像は 1リクエストあたり最大6枚、動画は最大1本（音声付き80秒・無音120秒）、音声は最大1ファイル180秒、PDF は最大1ファイル6ページ                                            |
 | gcs_uri の所有確認      | 現実装では申告された `gcs_uri` が自バケット内かを検証しない。悪意ある URI を渡されると外部バケットの読み取りを試みる。本番化時にバケット名プレフィックスでフィルタすること |
 | CORS origin             | 現在 `["*"]`。本番化の際は Firebase Hosting ドメイン等に絞ること                                                                                                           |
 | ライフサイクル30日      | Firestore 側の `gcs_uri` フィールドは30日後にリンク切れになる。デモ用途前提の設計                                                                                          |

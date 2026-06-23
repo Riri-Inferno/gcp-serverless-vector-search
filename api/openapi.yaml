@@ -55,9 +55,45 @@ components:
 
   schemas:
 
+    UploadUrlRequest:
+      type: object
+      required: [filename, content_type]
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          description: |
+            アップロードするファイルのオリジナルファイル名（拡張子を含む）。
+            サーバーは拡張子のみを使用し、GCS オブジェクト名は UUID で採番する。
+        content_type:
+          type: string
+          minLength: 1
+          description: |
+            アップロードするファイルの MIME タイプ。
+            gemini-embedding-2 が受け入れる型のみ許可。
+            例: image/jpeg, application/pdf, video/mp4, audio/mp3
+
+    UploadUrlResponse:
+      type: object
+      required: [upload_url, gcs_uri]
+      properties:
+        upload_url:
+          type: string
+          format: uri
+          description: |
+            5 分間有効な GCS V4 Signed URL (PUT)。
+            クライアントはこの URL に Content-Type ヘッダ付きで PUT すること。
+        gcs_uri:
+          type: string
+          description: |
+            アップロード先の GCS URI (gs://bucket/path)。
+            PUT 完了後に POST /v1/documents の gcs_uri フィールドに渡す。
+
     DocumentCreateRequest:
       type: object
-      required: [text]
+      description: |
+        text と gcs_uri は少なくとも一方が必須。
+        両方指定した場合はマルチモーダル入力として扱い、結合して埋め込む。
       properties:
         text:
           type: string
@@ -67,12 +103,18 @@ components:
             埋め込み対象テキスト。
             gemini-embedding-2 の入力上限は 8192 トークンだが、文字数で 8000 を上限としておく
             (実トークン数より少し余裕を持たせる安全側設定)。
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: |
+            GCS に事前アップロード済みのメディアファイル URI (gs://bucket/path)。
+            POST /v1/documents/upload-url で取得した gcs_uri を指定する。
         metadata:
           $ref: '#/components/schemas/Metadata'
 
     Document:
       type: object
-      required: [id, text, created_at]
+      required: [id, created_at]
       properties:
         id:
           type: string
@@ -80,6 +122,9 @@ components:
           description: サーバー生成の UUID v4
         text:
           type: string
+        gcs_uri:
+          type: string
+          description: 保存済みメディアファイルの GCS URI
         metadata:
           $ref: '#/components/schemas/Metadata'
         created_at:
@@ -113,13 +158,16 @@ components:
 
     SearchResult:
       type: object
-      required: [id, text, score]
+      required: [id, score]
       properties:
         id:
           type: string
           format: uuid
         text:
           type: string
+        gcs_uri:
+          type: string
+          description: メディアファイルの GCS URI（メディアドキュメントの場合のみ）
         metadata:
           $ref: '#/components/schemas/Metadata'
         score:
@@ -212,9 +260,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthzResponse'
 
+  /v1/documents/upload-url:
+    post:
+      summary: メディアファイルアップロード用の Signed URL を発行
+      operationId: getUploadUrl
+      description: |
+        クライアントはこの URL に対して PUT でファイルを直接 GCS にアップロードする。
+        アップロード完了後、返却された gcs_uri を POST /v1/documents の gcs_uri フィールドに指定して
+        埋め込み登録を行う。
+        API Gateway にファイルを直接送信しないことで、大容量ファイルの帯域・コストを削減する設計。
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Signed URL 発行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v1/documents:
     post:
-      summary: テキストを埋め込みベクトル化してドキュメントとして保存
+      summary: コンテンツを埋め込みベクトル化してドキュメントとして保存
       operationId: createDocument
       x-google-backend: vector_api_backend
       requestBody:

@@ -31,7 +31,7 @@ flowchart TD
     Fn1 -->|upload_url + gcs_uri| Client
     Client -->|Content-Type ヘッダ付き PUT| GCS
     Client -->|X-API-Key + gcs_uri + text| GW2 --> Fn2
-    Fn2 -- "Part.from_uri(gcs_uri) + text?" --> Gemini
+    Fn2 -- "GCS download → Part.from_bytes(data, mime_type) + text?" --> Gemini
     Gemini -->|2048次元ベクトル| Fn2
     Fn2 -->|embedding + gcs_uri + text| FS
 
@@ -95,7 +95,9 @@ sequenceDiagram
 
     C->>Fn: POST /v1/documents<br/>{"gcs_uri":"gs://...","text":"任意","metadata":{}}
     Fn->>Fn: text / gcs_uri の存在チェック<br/>(少なくとも一方が必須)
-    Fn->>Gemini: embed_content(<br/>  contents=[text?, Part.from_uri(gcs_uri)?],<br/>  task_type="RETRIEVAL_DOCUMENT"<br/>)
+    Fn->>GCS: storage.blob(gcs_uri).download_as_bytes()
+    GCS-->>Fn: バイナリ + content_type
+    Fn->>Gemini: embed_content(<br/>  contents=[text?, Part.from_bytes(data, mime_type)?],<br/>  output_dimensionality=2048<br/>)
     Gemini-->>Fn: vector[2048]
     Fn->>FS: documents.add({<br/>  embedding, text, gcs_uri, metadata<br/>})
     FS-->>Fn: document id
@@ -127,7 +129,9 @@ sequenceDiagram
 **マルチモーダル検索が成立する仕組み**
 
 Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の2048次元ベクトル空間(次元数は設定可能)**に射影する。
-登録時に `Part.from_uri()` で画像を埋め込んでいるため、「夕焼けの写真」というテキストクエリと、画像から生成されたベクトルが近傍に来る。
+登録時に GCS からバイナリをダウンロードして `Part.from_bytes(data, mime_type)` でインライン渡しするため、「夕焼けの写真」というテキストクエリと、画像から生成されたベクトルが近傍に来る。
+> **実装メモ**: Google AI Studio (API Key 認証) は `Part.from_uri("gs://...")` を直接サポートしない。
+> そのため Storage SDK でダウンロード後にインラインデータとして渡す。
 
 ---
 
@@ -227,8 +231,8 @@ documents/{uuid}:
 | 登録パターン       | `embed_content` の `contents`                |
 | ------------------ | -------------------------------------------- |
 | テキストのみ       | `["テキスト文字列"]`                         |
-| メディアのみ       | `[Part.from_uri(gcs_uri)]`                   |
-| テキスト＋メディア | `["テキスト文字列", Part.from_uri(gcs_uri)]` |
+| メディアのみ       | `[Part.from_bytes(data, mime_type)]`                   |
+| テキスト＋メディア | `["テキスト文字列", Part.from_bytes(data, mime_type)]` |
 
 ---
 

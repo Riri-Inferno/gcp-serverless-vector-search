@@ -26,6 +26,14 @@ class UploadUrlResponse(BaseModel):
     gcs_uri: str
 
 
+class DownloadUrlRequest(BaseModel):
+    gcs_uri: str = Field(pattern=r"^gs://.+")
+
+
+class DownloadUrlResponse(BaseModel):
+    download_url: str
+
+
 class DocumentCreateRequest(BaseModel):
     text: str | None = Field(default=None, min_length=1, max_length=8000)
     gcs_uri: str | None = Field(default=None, pattern=r"^gs://.+")

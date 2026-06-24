@@ -31,6 +31,8 @@ from pydantic import ValidationError
 from models import (
     Document,
     DocumentCreateRequest,
+    DownloadUrlRequest,
+    DownloadUrlResponse,
     Problem,
     SearchRequest,
     SearchResponse,
@@ -185,6 +187,33 @@ def handle_get_upload_url(request) -> Response:
     return _json(UploadUrlResponse(upload_url=upload_url, gcs_uri=gcs_uri).model_dump(), 200)
 
 
+def handle_get_download_url(request) -> Response:
+    try:
+        payload = DownloadUrlRequest.model_validate_json(request.get_data())
+    except ValidationError as e:
+        return problem("validation_error", "Invalid request body", 400, str(e))
+
+    try:
+        credentials, _ = google.auth.default()
+        auth_req = google.auth.transport.requests.Request()
+        credentials.refresh(auth_req)
+
+        bucket_name, blob_path = _parse_gcs_uri(payload.gcs_uri)
+        blob = get_storage_client().bucket(bucket_name).blob(blob_path)
+        download_url = blob.generate_signed_url(
+            version="v4",
+            expiration=datetime.timedelta(hours=1),
+            method="GET",
+            service_account_email=credentials.service_account_email,
+            access_token=credentials.token,
+        )
+    except Exception:
+        logger.exception("download URL generation failed")
+        return problem("internal_error", "Failed to generate download URL", 500)
+
+    return _json(DownloadUrlResponse(download_url=download_url).model_dump(), 200)
+
+
 def handle_create_document(request) -> Response:
     try:
         payload = DocumentCreateRequest.model_validate_json(request.get_data())
@@ -288,6 +317,8 @@ def main(request):
         return handle_create_document(request)
     if method == "POST" and path == "/v1/search":
         return handle_search(request)
+    if method == "POST" and path == "/v1/media/download-url":
+        return handle_get_download_url(request)
 
     return problem(
         "not_found",

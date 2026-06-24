@@ -55,6 +55,24 @@ components:
 
   schemas:
 
+    DownloadUrlRequest:
+      type: object
+      required: [gcs_uri]
+      properties:
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: ダウンロード対象のメディアファイル URI (gs://bucket/path)
+
+    DownloadUrlResponse:
+      type: object
+      required: [download_url]
+      properties:
+        download_url:
+          type: string
+          format: uri
+          description: 1 時間有効な GCS V4 Signed URL (GET)。ブラウザで直接表示可能。
+
     UploadUrlRequest:
       type: object
       required: [filename, content_type]
@@ -269,6 +287,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthzResponse'
+
+  /v1/media/download-url:
+    post:
+      summary: GCS メディアファイルのダウンロード用 Signed URL を発行
+      operationId: getDownloadUrl
+      description: |
+        検索結果の gcs_uri をブラウザで表示するための GET 用 Signed URL を返す。
+        Signed URL は 1 時間有効。
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadUrlRequest'
+      responses:
+        '200':
+          description: Signed URL 発行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v1/documents/upload-url:
     post:

@@ -112,7 +112,7 @@ def problem(type_slug: str, title: str, status: int, detail: str | None = None) 
 # Embedding
 # ---------------------------------------------------------------------------
 def embed(text: str | None, gcs_uri: str | None = None) -> list[float]:
-    """gemini-embedding-2 でコンテンツを 1536 次元ベクトルに変換する。
+    """gemini-embedding-2 でコンテンツを 2048 次元ベクトルに変換する。
 
     Google AI Studio (API Key 認証) は gs:// URI を直接読めないため、
     gcs_uri が指定された場合は GCS からバイナリをダウンロードして
@@ -233,7 +233,7 @@ def handle_search(request) -> Response:
         return problem("validation_error", "Invalid request body", 400, str(e))
 
     try:
-        query_vector = embed(payload.query)
+        query_vector = embed(payload.query, payload.gcs_uri)
     except Exception:
         logger.exception("query embedding failed")
         return problem("internal_error", "Embedding generation failed", 500)
@@ -280,7 +280,6 @@ def handle_search(request) -> Response:
 def main(request):
     path = request.path.rstrip("/") or "/"
     method = request.method
-    logger.info("dispatch path=%r method=%r", path, method)
 
     # upload-url を /v1/documents より先にマッチさせる（プレフィックス衝突を防ぐ）
     if method == "POST" and path == "/v1/documents/upload-url":

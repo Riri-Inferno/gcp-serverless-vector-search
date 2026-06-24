@@ -3,8 +3,8 @@ openapi: 3.0.4
 info:
   title: gcp-serverless-vector-search API
   description: |
-    マルチモーダル対応のサーバーレス・ベクトル検索 API (MVP)。
-    最初のフェーズではテキスト登録 / 検索のみを提供する。
+    マルチモーダル対応のサーバーレス・ベクトル検索 API。
+    テキスト・画像・音声・動画・PDF の登録とクロスモーダル検索を提供する。
 
     設計判断の経緯は `docs/adr/` を参照:
       - 0001 API MVP 設計（エンドポイント / ID / メタデータ / スコア / エラー）
@@ -143,12 +143,22 @@ components:
 
     SearchRequest:
       type: object
-      required: [query]
+      description: |
+        query と gcs_uri は少なくとも一方が必須。
+        gcs_uri を指定するとメディアファイルをクエリとした画像検索・音声検索が可能。
+        両方指定した場合はマルチモーダル入力として結合して埋め込む。
       properties:
         query:
           type: string
           minLength: 1
           maxLength: 8000
+          description: テキストクエリ。gcs_uri との併用も可。
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: |
+            GCS に事前アップロード済みのメディアファイル URI (gs://bucket/path)。
+            POST /v1/documents/upload-url で取得した gcs_uri を指定する。
         top_k:
           type: integer
           minimum: 1
@@ -319,7 +329,7 @@ paths:
 
   /v1/search:
     post:
-      summary: 自然言語クエリで近傍検索
+      summary: テキスト / メディアクエリで近傍ベクトル検索（クロスモーダル対応）
       operationId: searchDocuments
       x-google-backend: vector_api_backend
       requestBody:

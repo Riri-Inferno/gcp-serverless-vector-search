@@ -47,8 +47,15 @@ class Document(BaseModel):
 
 
 class SearchRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=8000)
+    query: str | None = Field(default=None, min_length=1, max_length=8000)
+    gcs_uri: str | None = Field(default=None, pattern=r"^gs://.+")
     top_k: int = Field(default=10, ge=1, le=50)
+
+    @model_validator(mode="after")
+    def at_least_one_required(self) -> "SearchRequest":
+        if self.query is None and self.gcs_uri is None:
+            raise ValueError("query または gcs_uri のどちらか一方は必須")
+        return self
 
 
 class SearchResult(BaseModel):

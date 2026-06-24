@@ -81,6 +81,12 @@ resource "google_api_gateway_gateway" "vector_search" {
   region     = var.region
 
   depends_on = [google_api_gateway_api_config.vector_search]
+
+  # api_config が新しい ID で recreate されると Gateway の in-place update だけでは
+  # GCP 側が旧 Config を掴み続ける既知の挙動があるため、Gateway も強制 recreate する。
+  lifecycle {
+    replace_triggered_by = [google_api_gateway_api_config.vector_search]
+  }
 }
 
 # API Gateway がデプロイ時に動的に作る managed service を有効化する。

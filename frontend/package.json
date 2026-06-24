@@ -1,0 +1,11 @@
+{
+  "name": "riri-vector-search-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "tailwindcss -i src/input.css -o output.css --watch",
+    "build": "tailwindcss -i src/input.css -o output.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

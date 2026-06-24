@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>riri-vector-search</title>
+    <link rel="stylesheet" href="output.css" />
+  </head>
+  <body class="bg-bg text-white min-h-screen pb-16 font-sans">
+    <!-- ── Header ── -->
+    <header
+      class="bg-gradient-to-r from-surface to-surface-2 border-b border-stroke px-6 py-5 flex items-center gap-3"
+    >
+      <h1 class="text-xl font-bold tracking-tight">riri-vector-search</h1>
+      <span
+        class="text-[0.65rem] bg-accent text-white px-2.5 py-0.5 rounded-full font-semibold"
+        >DEMO</span
+      >
+    </header>
+
+    <!-- ── API Key bar ── -->
+    <div
+      class="bg-surface border-b border-stroke px-6 py-3 flex items-center gap-3"
+    >
+      <label class="text-xs text-muted whitespace-nowrap">X-API-Key</label>
+      <input
+        type="text"
+        id="apikey-input"
+        class="flex-1 max-w-md bg-surface-2 border border-stroke rounded-lg px-3 py-1.5 text-white text-sm font-mono focus:outline-none focus:border-accent transition-colors"
+        placeholder="AIzaSy..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span id="apikey-status" class="text-xs"></span>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="max-w-5xl mx-auto px-6 py-6">
+      <!-- Tabs -->
+      <div class="flex gap-1.5 mb-6">
+        <button
+          class="tab-btn px-5 py-2 border rounded-lg text-sm transition-all"
+          data-tab="search"
+        >
+          検索
+        </button>
+        <button
+          class="tab-btn px-5 py-2 border rounded-lg text-sm transition-all"
+          data-tab="register"
+        >
+          登録
+        </button>
+      </div>
+
+      <!-- ══ 検索タブ ══ -->
+      <div id="tab-search" class="tab-panel">
+        <div class="bg-surface border border-stroke rounded-xl p-6 mb-5">
+          <!-- モード切り替え -->
+          <div class="flex gap-2 mb-5">
+            <button
+              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              data-mode="text"
+            >
+              テキスト
+            </button>
+            <button
+              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              data-mode="image"
+            >
+              画像
+            </button>
+            <button
+              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              data-mode="both"
+            >
+              テキスト＋画像
+            </button>
+          </div>
+
+          <!-- テキスト入力 -->
+          <div id="search-text-area" class="mb-4">
+            <label class="block text-xs text-muted mb-1.5">検索テキスト</label>
+            <input
+              type="text"
+              id="search-query"
+              class="w-full bg-surface-2 border border-stroke rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors"
+              placeholder="例: 猫、キリン、夕日の海岸..."
+            />
+          </div>
+
+          <!-- 画像入力 -->
+          <div id="search-image-area" class="mb-4 hidden">
+            <label class="block text-xs text-muted mb-1.5">検索画像</label>
+            <div
+              id="search-dropzone"
+              class="relative border-2 border-dashed border-stroke rounded-xl p-6 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"
+            >
+              <input
+                type="file"
+                id="search-file"
+                accept="image/*"
+                class="absolute inset-0 opacity-0 cursor-pointer"
+              />
+              <div id="search-dz-icon" class="text-3xl mb-2">🔍</div>
+              <div id="search-dz-text" class="text-muted text-sm">
+                <span class="text-accent font-medium">クリック</span
+                >または画像をドロップ
+              </div>
+              <img
+                id="search-preview"
+                class="hidden max-h-44 mx-auto rounded-lg object-cover"
+                alt=""
+              />
+            </div>
+          </div>
+
+          <!-- 件数 + 検索ボタン -->
+          <div class="flex items-end gap-3">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">件数</label>
+              <input
+                type="text"
+                id="search-topk"
+                value="10"
+                class="w-16 text-center bg-surface-2 border border-stroke rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <button
+              id="search-btn"
+              onclick="runSearch()"
+              class="px-6 py-2 bg-accent-2 hover:bg-accent-2/80 text-bg rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              検索
+            </button>
+          </div>
+        </div>
+
+        <!-- 検索結果 -->
+        <div id="results-section" class="hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm text-muted">検索結果</h3>
+            <span id="results-count" class="text-xs text-muted"></span>
+          </div>
+          <div
+            id="results-grid"
+            class="grid gap-4"
+            style="grid-template-columns: repeat(auto-fill, minmax(190px, 1fr))"
+          ></div>
+        </div>
+      </div>
+
+      <!-- ══ 登録タブ ══ -->
+      <div id="tab-register" class="tab-panel hidden">
+        <!-- テキスト登録 -->
+        <div class="bg-surface border border-stroke rounded-xl p-6 mb-5">
+          <h2 class="text-sm font-semibold mb-4">テキスト登録</h2>
+          <label class="block text-xs text-muted mb-1.5">テキスト内容</label>
+          <textarea
+            id="reg-text"
+            class="w-full bg-surface-2 border border-stroke rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors resize-y min-h-[80px] mb-3 font-sans"
+            placeholder="埋め込み対象のテキストを入力..."
+          ></textarea>
+          <button
+            onclick="registerText()"
+            class="px-5 py-2 bg-accent hover:bg-accent/80 text-white rounded-lg font-semibold text-sm transition-colors"
+          >
+            登録
+          </button>
+        </div>
+
+        <!-- メディア登録 -->
+        <div class="bg-surface border border-stroke rounded-xl p-6 mb-5">
+          <h2 class="text-sm font-semibold mb-4">画像 / メディア登録</h2>
+          <div
+            id="reg-dropzone"
+            class="relative border-2 border-dashed border-stroke rounded-xl p-6 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all mb-3"
+          >
+            <input
+              type="file"
+              id="reg-file"
+              accept="image/*,video/*,audio/*,application/pdf"
+              class="absolute inset-0 opacity-0 cursor-pointer"
+            />
+            <div id="reg-dz-icon" class="text-3xl mb-2">📁</div>
+            <div id="reg-dz-text" class="text-muted text-sm">
+              <span class="text-accent font-medium">クリックまたはドロップ</span
+              ><br />
+              <span class="text-xs">画像 / 動画 / 音声 / PDF</span>
+            </div>
+            <img
+              id="reg-preview"
+              class="hidden max-h-44 mx-auto rounded-lg object-cover"
+              alt=""
+            />
+          </div>
+          <!-- プログレスバー -->
+          <div
+            id="reg-progress-wrap"
+            class="hidden h-1 bg-stroke rounded-full overflow-hidden mb-3"
+          >
+            <div
+              id="reg-progress"
+              class="h-full bg-accent rounded-full transition-all duration-300"
+              style="width: 0%"
+            ></div>
+          </div>
+          <button
+            onclick="registerMedia()"
+            class="px-5 py-2 bg-accent hover:bg-accent/80 text-white rounded-lg font-semibold text-sm transition-colors"
+          >
+            登録
+          </button>
+        </div>
+
+        <!-- セッション登録済み一覧 -->
+        <div
+          id="registered-card"
+          class="bg-surface border border-stroke rounded-xl p-6 hidden"
+        >
+          <h2 class="text-sm font-semibold mb-4">今セッションで登録</h2>
+          <div id="doc-list" class="flex flex-col gap-2"></div>
+        </div>
+      </div>
+    </div>
+    <!-- /container -->
+
+    <!-- Toast area -->
+    <div
+      id="toast-area"
+      class="fixed bottom-5 right-5 flex flex-col gap-2 z-50"
+    ></div>
+
+    <script>
+      const API_BASE = "https://vector-search.riri-inferno.com";
+
+      // ── API Key ───────────────────────────────────────────────
+      const apikeyInput = document.getElementById("apikey-input");
+      const apikeyStatus = document.getElementById("apikey-status");
+
+      (function loadApiKey() {
+        const saved = localStorage.getItem("riri_api_key");
+        if (saved) {
+          apikeyInput.value = saved;
+          setStatus(true);
+        }
+      })();
+
+      apikeyInput.addEventListener("input", () => {
+        const v = apikeyInput.value.trim();
+        if (v) {
+          localStorage.setItem("riri_api_key", v);
+          setStatus(true);
+        } else {
+          localStorage.removeItem("riri_api_key");
+          setStatus(false);
+        }
+      });
+
+      function setStatus(ok) {
+        apikeyStatus.textContent = ok ? "✓ 保存済み" : "";
+        apikeyStatus.className = ok ? "text-xs text-accent-2" : "text-xs";
+      }
+
+      function getApiKey() {
+        const key = apikeyInput.value.trim();
+        if (!key) {
+          toast("X-API-Key を入力してください", "error");
+          return null;
+        }
+        return key;
+      }
+
+      // ── Tabs ─────────────────────────────────────────────────
+      const TAB_ACTIVE = [
+        "bg-accent",
+        "border-accent",
+        "text-white",
+        "font-semibold",
+      ];
+      const TAB_INACTIVE = ["bg-surface", "border-stroke", "text-muted"];
+
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach((b) => {
+            b.classList.remove(...TAB_ACTIVE);
+            b.classList.add(...TAB_INACTIVE);
+          });
+          document
+            .querySelectorAll(".tab-panel")
+            .forEach((p) => p.classList.add("hidden"));
+          btn.classList.add(...TAB_ACTIVE);
+          btn.classList.remove(...TAB_INACTIVE);
+          document
+            .getElementById("tab-" + btn.dataset.tab)
+            .classList.remove("hidden");
+        });
+        btn.classList.add(...TAB_INACTIVE);
+      });
+      document
+        .querySelector('[data-tab="search"]')
+        .classList.remove(...TAB_INACTIVE);
+      document
+        .querySelector('[data-tab="search"]')
+        .classList.add(...TAB_ACTIVE);
+
+      // ── Search Mode ───────────────────────────────────────────
+      const MODE_ACTIVE = ["bg-surface-2", "border-accent-2", "text-accent-2"];
+      const MODE_INACTIVE = ["border-stroke", "text-muted"];
+
+      document.querySelectorAll(".mode-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".mode-btn").forEach((b) => {
+            b.classList.remove(...MODE_ACTIVE);
+            b.classList.add(...MODE_INACTIVE);
+          });
+          btn.classList.add(...MODE_ACTIVE);
+          btn.classList.remove(...MODE_INACTIVE);
+          const m = btn.dataset.mode;
+          document
+            .getElementById("search-text-area")
+            .classList.toggle("hidden", m === "image");
+          document
+            .getElementById("search-image-area")
+            .classList.toggle("hidden", m === "text");
+        });
+        btn.classList.add(...MODE_INACTIVE);
+      });
+      document
+        .querySelector('[data-mode="text"]')
+        .classList.remove(...MODE_INACTIVE);
+      document
+        .querySelector('[data-mode="text"]')
+        .classList.add(...MODE_ACTIVE);
+
+      // ── Dropzone helper ───────────────────────────────────────
+      function setupDropzone(dzId, fileId, previewId, iconId, textId) {
+        const dz = document.getElementById(dzId);
+        const fi = document.getElementById(fileId);
+        const pv = document.getElementById(previewId);
+
+        fi.addEventListener("change", () =>
+          showPreview(fi, pv, iconId, textId),
+        );
+        dz.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dz.classList.add("border-accent", "bg-accent/5");
+        });
+        dz.addEventListener("dragleave", () =>
+          dz.classList.remove("border-accent", "bg-accent/5"),
+        );
+        dz.addEventListener("drop", (e) => {
+          e.preventDefault();
+          dz.classList.remove("border-accent", "bg-accent/5");
+          if (e.dataTransfer.files.length) {
+            fi.files = e.dataTransfer.files;
+            showPreview(fi, pv, iconId, textId);
+          }
+        });
+      }
+
+      function showPreview(fi, pv, iconId, textId) {
+        const file = fi.files[0];
+        if (!file) return;
+        document.getElementById(iconId).classList.add("hidden");
+        document.getElementById(textId).classList.add("hidden");
+        if (file.type.startsWith("image/")) {
+          pv.src = URL.createObjectURL(file);
+          pv.classList.remove("hidden");
+        } else {
+          document.getElementById(textId).textContent = file.name;
+          document.getElementById(textId).classList.remove("hidden");
+        }
+      }
+
+      setupDropzone(
+        "search-dropzone",
+        "search-file",
+        "search-preview",
+        "search-dz-icon",
+        "search-dz-text",
+      );
+      setupDropzone(
+        "reg-dropzone",
+        "reg-file",
+        "reg-preview",
+        "reg-dz-icon",
+        "reg-dz-text",
+      );
+
+      // ── API helpers ───────────────────────────────────────────
+      async function apiFetch(path, body) {
+        const key = getApiKey();
+        if (!key) return null;
+        const res = await fetch(API_BASE + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-API-Key": key },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(data.detail || data.title || `HTTP ${res.status}`);
+        return data;
+      }
+
+      async function getDownloadUrl(gcsUri) {
+        try {
+          return (
+            (await apiFetch("/v1/media/download-url", { gcs_uri: gcsUri }))
+              ?.download_url ?? null
+          );
+        } catch {
+          return null;
+        }
+      }
+
+      // ── Search ────────────────────────────────────────────────
+      async function runSearch() {
+        const key = getApiKey();
+        if (!key) return;
+        const mode =
+          document.querySelector(".mode-btn.bg-surface-2")?.dataset.mode ??
+          "text";
+        const query = document.getElementById("search-query").value.trim();
+        const file = document.getElementById("search-file").files[0];
+        const topK =
+          parseInt(document.getElementById("search-topk").value) || 10;
+
+        const body = { top_k: topK };
+        if ((mode === "text" || mode === "both") && query) body.query = query;
+
+        if ((mode === "image" || mode === "both") && file) {
+          toast("画像をアップロード中...", "info");
+          try {
+            body.gcs_uri = await uploadFile(file);
+          } catch (e) {
+            toast("画像アップロード失敗: " + e.message, "error");
+            return;
+          }
+        }
+
+        if (!body.query && !body.gcs_uri) {
+          toast("テキストまたは画像を入力してください", "error");
+          return;
+        }
+
+        const btn = document.getElementById("search-btn");
+        btn.disabled = true;
+        btn.textContent = "検索中...";
+        try {
+          await renderResults((await apiFetch("/v1/search", body)).results);
+        } catch (e) {
+          toast("検索エラー: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "検索";
+        }
+      }
+
+      document
+        .getElementById("search-query")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") runSearch();
+        });
+
+      async function renderResults(results) {
+        const section = document.getElementById("results-section");
+        const grid = document.getElementById("results-grid");
+        document.getElementById("results-count").textContent =
+          `${results.length} 件`;
+        section.classList.remove("hidden");
+        grid.innerHTML = "";
+
+        // skeleton cards
+        results.forEach(() => {
+          const sk = document.createElement("div");
+          sk.className =
+            "bg-surface-2 border border-stroke rounded-xl overflow-hidden";
+          sk.innerHTML = `<div class="animate-shimmer w-full aspect-square"></div>
+      <div class="p-3">
+        <div class="animate-shimmer h-3 rounded mb-2"></div>
+        <div class="animate-shimmer h-2.5 w-3/5 rounded"></div>
+      </div>`;
+          grid.appendChild(sk);
+        });
+
+        await Promise.all(
+          results.map(async (r, i) => {
+            const isImage = !!r.gcs_uri;
+            const thumbUrl = isImage ? await getDownloadUrl(r.gcs_uri) : null;
+            const pct = Math.round(r.score * 100);
+
+            const thumbHtml =
+              isImage && thumbUrl
+                ? `<img src="${thumbUrl}" alt="" class="w-full aspect-square object-cover block" loading="lazy">`
+                : isImage
+                  ? `<div class="w-full aspect-square bg-surface flex items-center justify-content-center text-3xl p-4 text-center text-muted text-xs leading-relaxed">🖼️<br>${esc(r.gcs_uri.split("/").pop())}</div>`
+                  : `<div class="w-full aspect-square bg-surface flex items-center justify-center p-3 text-muted text-xs leading-relaxed text-center">${esc((r.text ?? "").slice(0, 80))}</div>`;
+
+            const badgeCls = isImage
+              ? "bg-accent/20 text-accent"
+              : "bg-accent-2/20 text-accent-2";
+            const badgeLabel = isImage ? "画像" : "テキスト";
+
+            const card = document.createElement("div");
+            card.className =
+              "bg-surface-2 border border-stroke rounded-xl overflow-hidden hover:-translate-y-0.5 hover:border-accent transition-all";
+            card.innerHTML = `
+      ${thumbHtml}
+      <div class="p-3">
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="text-accent-2 font-bold text-sm">${r.score.toFixed(3)}</span>
+          <div class="flex-1 h-1 bg-stroke rounded-full overflow-hidden">
+            <div class="h-full bg-accent-2 rounded-full" style="width:${pct}%"></div>
+          </div>
+          <span class="text-[0.6rem] px-1.5 py-0.5 rounded-full font-semibold ${badgeCls}">${badgeLabel}</span>
+        </div>
+        ${!isImage && r.text ? `<p class="text-muted text-xs leading-relaxed">${esc(r.text.slice(0, 80))}</p>` : ""}
+      </div>`;
+            grid.children[i].replaceWith(card);
+          }),
+        );
+      }
+
+      // ── Register Text ─────────────────────────────────────────
+      async function registerText() {
+        const text = document.getElementById("reg-text").value.trim();
+        if (!text) {
+          toast("テキストを入力してください", "error");
+          return;
+        }
+        try {
+          const doc = await apiFetch("/v1/documents", { text });
+          toast("テキスト登録完了", "success");
+          addSessionDoc({ id: doc.id, text: doc.text, gcs_uri: null });
+          document.getElementById("reg-text").value = "";
+        } catch (e) {
+          toast("登録エラー: " + e.message, "error");
+        }
+      }
+
+      // ── Register Media ────────────────────────────────────────
+      async function registerMedia() {
+        const file = document.getElementById("reg-file").files[0];
+        if (!file) {
+          toast("ファイルを選択してください", "error");
+          return;
+        }
+
+        const wrap = document.getElementById("reg-progress-wrap");
+        const bar = document.getElementById("reg-progress");
+        wrap.classList.remove("hidden");
+        setBar(bar, 10);
+
+        try {
+          toast("Signed URL 取得中...", "info");
+          const gcsUri = await uploadFile(file, bar);
+          setBar(bar, 85);
+          toast("ドキュメント登録中...", "info");
+          const doc = await apiFetch("/v1/documents", { gcs_uri: gcsUri });
+          setBar(bar, 100);
+          toast("メディア登録完了", "success");
+          addSessionDoc({ id: doc.id, text: null, gcs_uri: gcsUri });
+          resetDropzone(
+            "reg-file",
+            "reg-preview",
+            "reg-dz-icon",
+            "reg-dz-text",
+          );
+        } catch (e) {
+          toast("登録エラー: " + e.message, "error");
+        } finally {
+          setTimeout(() => {
+            wrap.classList.add("hidden");
+            setBar(bar, 0);
+          }, 800);
+        }
+      }
+
+      // ── Upload (Signed URL flow) ──────────────────────────────
+      async function uploadFile(file, bar) {
+        const key = getApiKey();
+        if (!key) throw new Error("API Key が未設定");
+        const urlRes = await apiFetch("/v1/documents/upload-url", {
+          filename: file.name,
+          content_type: file.type || "application/octet-stream",
+        });
+        if (!urlRes) throw new Error("upload-url 取得失敗");
+        bar && setBar(bar, 40);
+
+        const putRes = await fetch(urlRes.upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!putRes.ok) throw new Error(`GCS PUT failed: ${putRes.status}`);
+        bar && setBar(bar, 70);
+        return urlRes.gcs_uri;
+      }
+
+      // ── Session doc list ──────────────────────────────────────
+      async function addSessionDoc(doc) {
+        document.getElementById("registered-card").classList.remove("hidden");
+        const list = document.getElementById("doc-list");
+        const item = document.createElement("div");
+        item.className =
+          "bg-surface-2 border border-stroke rounded-lg px-3.5 py-2.5 flex items-center gap-3";
+
+        let thumbHtml = doc.gcs_uri
+          ? `<div class="w-11 h-11 rounded-lg bg-stroke animate-shimmer flex-shrink-0"></div>`
+          : `<div class="w-11 h-11 rounded-lg bg-surface flex-shrink-0 flex items-center justify-center text-lg">📄</div>`;
+
+        item.innerHTML = `${thumbHtml}
+    <div class="flex-1 min-w-0">
+      <p class="text-sm truncate">${esc(doc.text ? doc.text.slice(0, 60) : (doc.gcs_uri?.split("/").pop() ?? ""))}</p>
+      <p class="text-xs text-muted font-mono mt-0.5 truncate">${doc.id}</p>
+    </div>`;
+        list.prepend(item);
+
+        if (doc.gcs_uri) {
+          const url = await getDownloadUrl(doc.gcs_uri);
+          const thumb = item.querySelector("div.animate-shimmer");
+          if (url && thumb)
+            thumb.outerHTML = `<img src="${url}" class="w-11 h-11 rounded-lg object-cover flex-shrink-0" alt="">`;
+        }
+      }
+
+      function resetDropzone(fileId, previewId, iconId, textId) {
+        document.getElementById(fileId).value = "";
+        const pv = document.getElementById(previewId);
+        pv.classList.add("hidden");
+        pv.src = "";
+        document.getElementById(iconId).classList.remove("hidden");
+        document.getElementById(textId).classList.remove("hidden");
+      }
+
+      // ── Utilities ─────────────────────────────────────────────
+      function setBar(bar, pct) {
+        bar.style.width = pct + "%";
+      }
+
+      function toast(msg, type = "info") {
+        const el = document.createElement("div");
+        const cls =
+          type === "success"
+            ? "bg-accent-2 text-bg"
+            : type === "error"
+              ? "bg-danger text-white"
+              : "bg-surface-2 border border-stroke text-white";
+        el.className = `animate-slide-in ${cls} px-4 py-2.5 rounded-lg text-sm max-w-xs shadow-lg`;
+        el.textContent = msg;
+        document.getElementById("toast-area").appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      function esc(str) {
+        return (str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+    </script>
+  </body>
+</html>

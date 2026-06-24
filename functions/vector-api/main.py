@@ -280,6 +280,7 @@ def handle_search(request) -> Response:
 def main(request):
     path = request.path.rstrip("/") or "/"
     method = request.method
+    logger.info("dispatch path=%r method=%r", path, method)
 
     # upload-url を /v1/documents より先にマッチさせる（プレフィックス衝突を防ぐ）
     if method == "POST" and path == "/v1/documents/upload-url":

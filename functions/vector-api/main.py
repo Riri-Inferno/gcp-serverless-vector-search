@@ -255,6 +255,36 @@ def handle_create_document(request) -> Response:
     return _json(response, 201)
 
 
+def handle_delete_document(request, doc_id: str) -> Response:
+    db = get_firestore_client()
+    doc_ref = db.collection(COLLECTION).document(doc_id)
+
+    try:
+        snap = doc_ref.get()
+    except Exception:
+        logger.exception("firestore get failed for doc_id=%s", doc_id)
+        return problem("internal_error", "Failed to fetch document", 500)
+
+    if not snap.exists:
+        return problem("not_found", "Document not found", 404, f"id '{doc_id}' does not exist")
+
+    gcs_uri = (snap.to_dict() or {}).get("gcs_uri")
+    if gcs_uri:
+        try:
+            bucket_name, blob_path = _parse_gcs_uri(gcs_uri)
+            get_storage_client().bucket(bucket_name).blob(blob_path).delete()
+        except Exception:
+            logger.warning("GCS delete skipped (blob gone or error): %s", gcs_uri)
+
+    try:
+        doc_ref.delete()
+    except Exception:
+        logger.exception("firestore delete failed for doc_id=%s", doc_id)
+        return problem("internal_error", "Firestore delete failed", 500)
+
+    return Response("", status=204)
+
+
 def handle_search(request) -> Response:
     try:
         payload = SearchRequest.model_validate_json(request.get_data())
@@ -315,6 +345,10 @@ def main(request):
         return handle_get_upload_url(request)
     if method == "POST" and path == "/v1/documents":
         return handle_create_document(request)
+    if method == "DELETE" and path.startswith("/v1/documents/"):
+        doc_id = path.removeprefix("/v1/documents/")
+        if doc_id:
+            return handle_delete_document(request, doc_id)
     if method == "POST" and path == "/v1/search":
         return handle_search(request)
     if method == "POST" and path == "/v1/media/download-url":

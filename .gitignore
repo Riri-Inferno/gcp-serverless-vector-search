@@ -65,6 +65,7 @@ terraform.rc
 
 # local
 settings.local.json
+.local/*
 
 # frontend build artifacts
 frontend/node_modules/

@@ -180,6 +180,18 @@
             </div>
           </div>
 
+          <!-- 手書きプレビュー -->
+          <div id="search-draw-area" class="mb-4 hidden">
+            <label class="block text-xs text-muted mb-1.5">手書き画像</label>
+            <div class="relative border border-stroke rounded-xl overflow-hidden">
+              <img id="draw-preview" class="max-h-44 mx-auto block object-contain bg-white w-full" alt="" />
+              <button
+                onclick="openCanvasModal()"
+                class="absolute top-2 right-2 text-xs px-2 py-1 bg-surface border border-stroke rounded-lg text-muted hover:text-white transition-colors"
+              >再描画</button>
+            </div>
+          </div>
+
           <!-- 件数 + 検索ボタン -->
           <div class="flex items-end gap-3">
             <div>
@@ -512,6 +524,13 @@
 
       document.querySelectorAll(".mode-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
+          // 手書きモード解除
+          drawMode = false;
+          document.getElementById("search-draw-area").classList.add("hidden");
+          const db = document.getElementById("btn-draw");
+          db.classList.remove("border-accent", "text-accent");
+          db.classList.add("border-stroke", "text-muted");
+
           document.querySelectorAll(".mode-btn").forEach((b) => {
             b.classList.remove(...MODE_ACTIVE);
             b.classList.add(...MODE_INACTIVE);
@@ -669,9 +688,9 @@
       async function runSearch() {
         const key = getApiKey();
         if (!key) return;
-        const mode =
-          document.querySelector(".mode-btn.bg-surface-2")?.dataset.mode ??
-          "text";
+        const mode = drawMode
+          ? "image"
+          : (document.querySelector(".mode-btn.bg-surface-2")?.dataset.mode ?? "text");
         const query = document.getElementById("search-query").value.trim();
         const file = document.getElementById("search-file").files[0];
         const topK =
@@ -904,13 +923,14 @@
 
       // ── Canvas Search ─────────────────────────────────────────
       let signaturePad = null;
+      let drawMode = false;
+      let redoStack = [];
 
       function openCanvasModal() {
         const modal = document.getElementById("canvas-modal");
         modal.classList.remove("hidden");
         modal.classList.add("flex");
 
-        // 手書きボタンをフォーカス状態に
         const drawBtn = document.getElementById("btn-draw");
         drawBtn.classList.add("border-accent", "text-accent");
         drawBtn.classList.remove("border-stroke", "text-muted");
@@ -928,6 +948,7 @@
           minWidth: 2,
           maxWidth: 5,
         });
+        signaturePad.addEventListener("beginStroke", () => { redoStack = []; });
         signaturePad.clear();
       }
 
@@ -936,10 +957,12 @@
         modal.classList.add("hidden");
         modal.classList.remove("flex");
 
-        // 手書きボタンのフォーカスを解除
-        const drawBtn = document.getElementById("btn-draw");
-        drawBtn.classList.remove("border-accent", "text-accent");
-        drawBtn.classList.add("border-stroke", "text-muted");
+        // drawMode 中はボタンのハイライトを維持、キャンセル時のみ解除
+        if (!drawMode) {
+          const drawBtn = document.getElementById("btn-draw");
+          drawBtn.classList.remove("border-accent", "text-accent");
+          drawBtn.classList.add("border-stroke", "text-muted");
+        }
       }
 
       function handleModalBackdrop(e) {
@@ -949,6 +972,7 @@
 
       function clearCanvas() {
         signaturePad?.clear();
+        redoStack = [];
       }
 
       async function confirmCanvas() {
@@ -961,21 +985,24 @@
           document.getElementById("draw-canvas").toBlob(resolve, "image/png"),
         );
 
-        // 画像エリアにプレビュー表示（画像検索と同じ挙動）
-        const pv = document.getElementById("search-preview");
-        pv.src = URL.createObjectURL(blob);
-        pv.classList.remove("hidden");
-        document.getElementById("search-dz-icon").classList.add("hidden");
-        document.getElementById("search-dz-text").classList.add("hidden");
-
-        // search-file に blob をセット（runSearch が読める状態にする）
+        // search-file にセット（runSearch がそのまま使える）
         const dt = new DataTransfer();
         dt.items.add(new File([blob], "canvas.png", { type: "image/png" }));
         document.getElementById("search-file").files = dt.files;
 
-        // 画像モードに切り替え
-        document.querySelector('[data-mode="image"]').click();
+        // 手書きプレビューエリアに表示（テキスト・画像エリアを隠す）
+        document.getElementById("draw-preview").src = URL.createObjectURL(blob);
+        document.getElementById("search-text-area").classList.add("hidden");
+        document.getElementById("search-image-area").classList.add("hidden");
+        document.getElementById("search-draw-area").classList.remove("hidden");
 
+        // mode-btn の選択状態を解除（手書きモードが主役）
+        document.querySelectorAll(".mode-btn").forEach((b) => {
+          b.classList.remove(...MODE_ACTIVE);
+          b.classList.add(...MODE_INACTIVE);
+        });
+
+        drawMode = true;
         closeCanvasModal();
         toast("描画を設定しました。検索ボタンを押してください", "info");
       }
@@ -985,17 +1012,19 @@
           .getElementById("canvas-modal")
           .classList.contains("hidden");
         if (e.key === "Escape") closeCanvasModal();
-        if (
-          modalOpen &&
-          (e.ctrlKey || e.metaKey) &&
-          e.key === "z" &&
-          signaturePad
-        ) {
-          e.preventDefault();
-          const data = signaturePad.toData();
-          if (data.length > 0) {
-            data.pop();
-            signaturePad.fromData(data);
+        if (modalOpen && signaturePad) {
+          if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+            e.preventDefault();
+            const data = signaturePad.toData();
+            if (data.length > 0) { redoStack.push(data.pop()); signaturePad.fromData(data); }
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+            e.preventDefault();
+            if (redoStack.length > 0) {
+              const data = signaturePad.toData();
+              data.push(redoStack.pop());
+              signaturePad.fromData(data);
+            }
           }
         }
       });

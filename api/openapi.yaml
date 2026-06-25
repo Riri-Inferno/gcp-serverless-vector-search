@@ -90,6 +90,15 @@ components:
             アップロードするファイルの MIME タイプ。
             gemini-embedding-2 が受け入れる型のみ許可。
             例: image/jpeg, application/pdf, video/mp4, audio/mp3
+        purpose:
+          type: string
+          enum: [document, query]
+          default: document
+          description: |
+            アップロード用途。
+            `document`: ドキュメント登録用（GCS `inputs/` プレフィックス、Firestore に gcs_uri が記録される）。
+            `query`: 検索クエリ画像用（GCS `queries/` プレフィックス、翌日自動削除）。
+            省略時は `document` として扱う。
 
     UploadUrlResponse:
       type: object

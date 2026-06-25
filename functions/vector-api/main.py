@@ -163,7 +163,8 @@ def handle_get_upload_url(request) -> Response:
         )
 
     ext = pathlib.Path(payload.filename).suffix.lower()
-    object_name = f"inputs/{uuid.uuid4()}{ext}"
+    prefix = "queries" if payload.purpose == "query" else "inputs"
+    object_name = f"{prefix}/{uuid.uuid4()}{ext}"
 
     try:
         credentials, _ = google.auth.default()

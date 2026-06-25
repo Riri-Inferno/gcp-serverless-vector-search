@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>riri-vector-search</title>
     <link rel="stylesheet" href="output.css" />
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   </head>
   <body class="bg-bg text-white min-h-screen pb-16 font-sans">
     <!-- ── Header ── -->
@@ -20,17 +21,35 @@
 
     <!-- ── API Key bar ── -->
     <div
-      class="bg-surface border-b border-stroke px-6 py-3 flex items-center gap-3"
+      class="bg-surface border-b border-stroke px-4 md:px-6 py-3 flex items-center gap-3"
     >
       <label class="text-xs text-muted whitespace-nowrap">X-API-Key</label>
-      <input
-        type="text"
-        id="apikey-input"
-        class="flex-1 max-w-md bg-surface-2 border border-stroke rounded-lg px-3 py-1.5 text-white text-sm font-mono focus:outline-none focus:border-accent transition-colors"
-        placeholder="AIzaSy..."
-        autocomplete="off"
-        spellcheck="false"
-      />
+      <div class="flex-1 max-w-md flex items-center gap-1">
+        <input
+          type="password"
+          id="apikey-input"
+          class="flex-1 bg-surface-2 border border-stroke rounded-lg px-3 py-1.5 text-white text-sm font-mono focus:outline-none focus:border-accent transition-colors"
+          placeholder="AIzaSy..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button
+          id="apikey-toggle"
+          onclick="toggleApiKeyVisibility()"
+          class="p-1.5 text-muted hover:text-white transition-colors"
+          title="表示切り替え"
+        >
+          <svg id="icon-eye" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="icon-eye-off" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+        <button
+          onclick="copyApiKey()"
+          class="p-1.5 text-muted hover:text-white transition-colors"
+          title="コピー"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
       <span id="apikey-status" class="text-xs"></span>
     </div>
 
@@ -57,6 +76,10 @@
         <div class="bg-surface border border-stroke rounded-xl p-6 mb-5">
           <!-- モード切り替え -->
           <div class="flex flex-wrap gap-2 mb-5">
+            <button
+              onclick="openCanvasModal()"
+              class="px-4 py-2 rounded-full border border-stroke text-muted text-xs transition-all min-h-[36px] hover:border-accent hover:text-accent"
+            >✏ 手書き</button>
             <button
               class="mode-btn px-4 py-2 rounded-full border text-xs transition-all min-h-[36px]"
               data-mode="text"
@@ -235,6 +258,37 @@
     </div>
     <!-- /container -->
 
+    <!-- ── 手書きキャンバス モーダル ── -->
+    <div
+      id="canvas-modal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70"
+      onclick="handleModalBackdrop(event)"
+    >
+      <div class="bg-surface border border-stroke rounded-xl p-5 w-full max-w-sm mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-sm font-semibold">手書きで検索</h3>
+          <button onclick="closeCanvasModal()" class="text-muted hover:text-white text-xl leading-none transition-colors">×</button>
+        </div>
+        <div class="rounded-lg overflow-hidden border border-stroke">
+          <canvas
+            id="draw-canvas"
+            class="block w-full"
+            style="height:260px; touch-action:none; background:white;"
+          ></canvas>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button
+            onclick="clearCanvas()"
+            class="px-4 py-2 border border-stroke rounded-lg text-sm text-muted hover:text-white transition-colors"
+          >クリア</button>
+          <button
+            onclick="searchFromCanvas()"
+            class="flex-1 py-2 bg-accent-2 hover:bg-accent-2/80 text-bg rounded-lg font-semibold text-sm transition-colors"
+          >検索</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast area -->
     <div
       id="toast-area"
@@ -255,6 +309,21 @@
           setStatus(true);
         }
       })();
+
+      function toggleApiKeyVisibility() {
+        const input = document.getElementById("apikey-input");
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        document.getElementById("icon-eye").classList.toggle("hidden", isHidden);
+        document.getElementById("icon-eye-off").classList.toggle("hidden", !isHidden);
+      }
+
+      async function copyApiKey() {
+        const val = apikeyInput.value.trim();
+        if (!val) { toast("API Key が未入力です", "error"); return; }
+        await navigator.clipboard.writeText(val);
+        toast("API Key をコピーしました", "success");
+      }
 
       apikeyInput.addEventListener("input", () => {
         const v = apikeyInput.value.trim();
@@ -736,6 +805,77 @@
         document.getElementById(iconId).classList.remove("hidden");
         document.getElementById(textId).classList.remove("hidden");
       }
+
+      // ── Canvas Search ─────────────────────────────────────────
+      let signaturePad = null;
+
+      function openCanvasModal() {
+        const modal = document.getElementById("canvas-modal");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        const canvas = document.getElementById("draw-canvas");
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+
+        if (signaturePad) signaturePad.off();
+        signaturePad = new SignaturePad(canvas, {
+          backgroundColor: "rgb(255,255,255)",
+          penColor: "rgb(30,30,30)",
+          minWidth: 2,
+          maxWidth: 5,
+        });
+        signaturePad.clear();
+      }
+
+      function closeCanvasModal() {
+        const modal = document.getElementById("canvas-modal");
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+
+      function handleModalBackdrop(e) {
+        if (e.target === document.getElementById("canvas-modal")) closeCanvasModal();
+      }
+
+      function clearCanvas() {
+        signaturePad?.clear();
+      }
+
+      async function searchFromCanvas() {
+        if (!signaturePad || signaturePad.isEmpty()) {
+          toast("何か描いてください", "error");
+          return;
+        }
+        const blob = await new Promise((resolve) =>
+          document.getElementById("draw-canvas").toBlob(resolve, "image/png"),
+        );
+        const file = new File([blob], "canvas.png", { type: "image/png" });
+        closeCanvasModal();
+
+        const btn = document.getElementById("search-btn");
+        btn.disabled = true;
+        btn.textContent = "検索中...";
+        try {
+          toast("画像をアップロード中...", "info");
+          const gcsUri = await uploadFile(file);
+          const topK = parseInt(document.getElementById("search-topk").value) || 10;
+          await renderResults(
+            (await apiFetch("/v1/search", { gcs_uri: gcsUri, top_k: topK })).results,
+          );
+        } catch (e) {
+          toast("検索エラー: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "検索";
+        }
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeCanvasModal();
+      });
 
       // ── Utilities ─────────────────────────────────────────────
       function setBar(bar, pct) {

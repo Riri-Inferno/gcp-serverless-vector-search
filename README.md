@@ -1,183 +1,306 @@
-# gcp-serverless-vector-search
+<a id="readme-top"></a>
 
-GCP 上で動く、サーバーレス構成のマルチモーダル（テキスト＋画像）ベクトル検索システム。インフラは Terraform で管理。フロントエンドは Cloudflare Pages で配信。
+<!-- PROJECT SHIELDS -->
 
-- **API**: `https://vector-search.riri-inferno.com`
-- **フロントエンド（デモ UI）**: <https://vector-search-demo.riri-inferno.com/>
+[![Stars][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![License][license-shield]][license-url]
+[![Python][python-shield]][python-url]
+[![Terraform][terraform-shield]][terraform-url]
 
----
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
 
-## これは何か
+<!-- PLACEHOLDER: ロゴ画像を用意したら下記を差し替えてください -->
+<!-- <a href="https://github.com/Riri-Inferno/gcp-serverless-vector-search">
+  <img src="docs/images/logo.png" alt="Logo" width="80" height="80">
+</a> -->
 
-テキスト・画像・PDF・動画・音声を統一ベクトル空間（2048 次元）に格納し、自然言語クエリや画像クエリで横断検索できる個人向けサーバーレスシステム。
+<h3 align="center">GCP Serverless Vector Search</h3>
 
-| できること              | 補足                                                            |
-| ----------------------- | --------------------------------------------------------------- |
-| テキスト → テキスト検索 | 自然言語で類似ドキュメントを引く                                |
-| テキスト → 画像検索     | テキストで類似画像を検索（クロスモーダル）                      |
-| 画像 → 画像検索         | 画像で似た画像を検索                                            |
-| テキスト＋画像 → 検索   | 両方を同時にクエリとして使うマルチモーダル検索                  |
-| メディア登録            | 画像・動画・音声・PDF を GCS に直接アップロードし埋め込みを生成 |
-
----
-
-## フロントエンド
-
-ブラウザから API Key を入力するだけで、テキスト/画像検索・メディア登録が使える DEMO UI。
-
-<!-- SCREENSHOT: デモUI全体のスクリーンショット（検索結果が表示されている状態）をここに貼ってください -->
-
-### 検索モード
-
-| モード         | 操作                                                   |
-| -------------- | ------------------------------------------------------ |
-| テキスト       | 検索ワードを入力して検索                               |
-| 画像           | 画像をドロップまたはタップして選択し検索（スマホ対応） |
-| テキスト＋画像 | 両方を組み合わせてマルチモーダル検索                   |
-
-検索結果は画像／テキストでフィルタリング可能。
-
-<!-- SCREENSHOT: 画像モードで検索したときの結果グリッドのスクリーンショット -->
-
-### フロントエンドのローカル確認
-
-```bash
-cd frontend
-npm install
-npm run dev        # Tailwind ウォッチビルド
-# → index.html をブラウザで直接開く
-```
+<p align="center">
+  テキスト・画像・手書きで横断検索できる、GCP サーバーレス構成のマルチモーダルベクトル検索システム
+  <br />
+  <a href="docs/architecture.md"><strong>アーキテクチャを読む »</strong></a>
+  <br />
+  <br />
+  <a href="https://vector-search-demo.riri-inferno.com/">デモを見る</a>
+  &middot;
+  <a href="https://github.com/Riri-Inferno/gcp-serverless-vector-search/issues/new?labels=bug">バグを報告</a>
+  &middot;
+  <a href="https://github.com/Riri-Inferno/gcp-serverless-vector-search/issues/new?labels=enhancement">機能リクエスト</a>
+</p>
+</div>
 
 ---
 
-## API エンドポイント
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>目次</summary>
+  <ol>
+    <li><a href="#about-the-project">このプロジェクトについて</a></li>
+    <li><a href="#built-with">技術スタック</a></li>
+    <li>
+      <a href="#getting-started">はじめかた</a>
+      <ul>
+        <li><a href="#demo-ui">デモ UI を使う</a></li>
+        <li><a href="#api">API を直接叩く</a></li>
+        <li><a href="#local-dev">ローカル開発</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">使いかた</a></li>
+    <li><a href="#api-reference">API リファレンス</a></li>
+    <li><a href="#architecture">アーキテクチャ</a></li>
+    <li><a href="#roadmap">ロードマップ</a></li>
+    <li><a href="#license">ライセンス</a></li>
+    <li><a href="#contact">コンタクト</a></li>
+    <li><a href="#acknowledgments">謝辞</a></li>
+  </ol>
+</details>
+
+---
+
+## About The Project
+
+<!-- PLACEHOLDER: デモ UI 全体のスクリーンショット（検索結果が表示されている状態）を撮影し、
+     docs/images/screenshot-demo.png として保存した上で下記のコメントを外してください -->
+<!-- [![Demo Screenshot][product-screenshot]](https://vector-search-demo.riri-inferno.com/) -->
+
+テキスト・画像・手書きキャンバス・クリップボード貼り付けを入力として、2048 次元のベクトル空間で横断検索できるサーバーレスシステムです。
+
+**できること:**
+
+- テキストで画像を検索（クロスモーダル）
+- 画像で似た画像を検索
+- 手書きキャンバスで画像を検索
+- クリップボードに貼り付けた画像で即検索（Ctrl+V）
+- 検索結果を画像 / テキストでフィルタリング
+- ドキュメントの登録・削除（GCS メディアファイルも連動削除）
+
+Gemini Embedding API（`gemini-embedding-2`）でテキスト・画像・動画・音声・PDF を同一ベクトル空間に射影し、Firestore のネイティブベクトル検索（`find_nearest`）で近傍探索します。
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## Built With
+
+[![GCP Cloud Functions][cloudfunctions-shield]][cloudfunctions-url]
+[![Firestore][firestore-shield]][firestore-url]
+[![GCS][gcs-shield]][gcs-url]
+[![API Gateway][apigw-shield]][apigw-url]
+[![Gemini][gemini-shield]][gemini-url]
+[![Cloudflare][cloudflare-shield]][cloudflare-url]
+[![Terraform][terraform-shield]][terraform-url]
+[![Python][python-shield]][python-url]
+[![Tailwind CSS][tailwind-shield]][tailwind-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## Getting Started
+
+### Demo UI
+
+ブラウザだけで試せます。インストール不要。
+
+1. **<https://vector-search-demo.riri-inferno.com/>** を開く
+2. 画面上部の API Key 欄に発行済みの `X-API-Key` を入力
+3. テキスト / 画像 / 手書き いずれかで検索
+
+<!-- PLACEHOLDER: 手書きキャンバスのスクリーンショットを
+     docs/images/screenshot-canvas.png として保存した上で下記のコメントを外してください -->
+<!-- ![Canvas Search][canvas-screenshot] -->
+
+### API
 
 ベース URL: `https://vector-search.riri-inferno.com`  
-認証: すべてのリクエストに `X-API-Key` ヘッダが必要。
-
-| メソッド | パス                       | 概要                                                              |
-| -------- | -------------------------- | ----------------------------------------------------------------- |
-| `GET`    | `/health`                  | 死活監視                                                          |
-| `POST`   | `/v1/documents`            | テキスト or GCS URI を埋め込みベクトル化して保存                  |
-| `POST`   | `/v1/documents/upload-url` | メディアアップロード用 Signed URL を発行（5分間有効）             |
-| `POST`   | `/v1/search`               | テキスト / メディアクエリで近傍ベクトル検索（クロスモーダル対応） |
-| `POST`   | `/v1/media/download-url`   | GCS メディアファイルのダウンロード用 Signed URL を発行            |
-
-詳細なリクエスト/レスポンス仕様は [`api/openapi.yaml`](api/openapi.yaml) を参照。
-
-### クイック動作確認
+すべてのリクエストに `X-API-Key` ヘッダが必要です。
 
 ```bash
 # ヘルスチェック
 curl https://vector-search.riri-inferno.com/health \
-  -H "X-API-Key: <your-key>"
+  -H "X-API-Key: YOUR_KEY"
 
 # テキスト登録
 curl -X POST https://vector-search.riri-inferno.com/v1/documents \
-  -H "X-API-Key: <your-key>" \
+  -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"text": "夕日の海岸"}'
+  -d '{"text": "夕日の海岸線"}'
 
-# テキスト検索
+# テキストで検索
 curl -X POST https://vector-search.riri-inferno.com/v1/search \
-  -H "X-API-Key: <your-key>" \
+  -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"query": "海の夕暮れ", "top_k": 5}'
 ```
 
+### Local Dev
+
+```bash
+# Tailwind ウォッチビルド
+cd frontend
+npm install
+npm run dev
+
+# index.html をブラウザで直接開く（API Key が必要）
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ---
 
-## システムアーキテクチャ
+## Usage
 
-![System Architecture](docs/images/architecture.png)
+### 検索モード
 
-詳細なシーケンス図・コンポーネント一覧は [`docs/architecture.md`](docs/architecture.md) を参照。
+| モード         | 操作                                 | 補足                               |
+| -------------- | ------------------------------------ | ---------------------------------- |
+| テキスト       | キーワードを入力して検索             | 日本語・英語対応                   |
+| 画像           | ファイルを選択 / ドロップ            | スマホのカメラロールからも選択可   |
+| 手書き         | 鉛筆ボタン → キャンバスに描画 → 確定 | Ctrl+Z / Ctrl+Y でアンドゥ・リドゥ |
+| クリップボード | 画像をコピー後、検索エリアで Ctrl+V  | デスクトップ限定                   |
 
-### 処理フロー概要
+検索結果は **すべて / 画像 / テキスト** でフィルタリングできます。
+
+<!-- PLACEHOLDER: 画像モードの検索結果グリッドのスクリーンショットを
+     docs/images/screenshot-results.png として保存した上で下記のコメントを外してください -->
+<!-- ![Results Grid][results-screenshot] -->
+
+### ドキュメント登録
+
+デモ UI の「登録」タブから画像・テキストを登録できます。画像は GCS に直接アップロード（API Gateway を経由しない）され、Gemini でベクトル化して Firestore に保存されます。
+
+### ドキュメント削除
+
+検索結果カードの × ボタンから削除できます。Firestore のドキュメントと GCS のメディアファイルが同時に削除されます。
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## API Reference
+
+エンドポイント一覧:
+
+| メソッド | パス                       | 概要                                                  |
+| -------- | -------------------------- | ----------------------------------------------------- |
+| `GET`    | `/health`                  | 死活監視                                              |
+| `POST`   | `/v1/documents`            | コンテンツを埋め込みベクトル化して保存                |
+| `POST`   | `/v1/documents/upload-url` | メディアアップロード用 Signed URL 発行（5分）         |
+| `DELETE` | `/v1/documents/{id}`       | ドキュメント削除（GCS も連動）                        |
+| `POST`   | `/v1/search`               | テキスト / 画像クエリで近傍ベクトル検索               |
+| `POST`   | `/v1/media/download-url`   | GCS メディアのダウンロード用 Signed URL 発行（1時間） |
+
+リクエスト / レスポンスの詳細スキーマは [`api/openapi.yaml`](api/openapi.yaml) を参照してください。
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## Architecture
 
 ```
-Browser / CLI
+Browser
   └─ HTTPS + X-API-Key
-      └─ Cloudflare Worker (Host ヘッダ書き換え)
-          └─ GCP API Gateway (X-API-Key 認証)
-              ├─ GET  /health       → healthz (Cloud Functions)
-              └─ POST /v1/*         → vector-api (Cloud Functions)
-                  ├─ Firestore          (ベクトル保存 / 検索)
-                  ├─ GCS media-inputs   (メディアバイナリ)
-                  ├─ Secret Manager     (Gemini API Key)
-                  └─ Gemini Embedding API (2048-dim ベクトル生成)
+      └─ Cloudflare Worker（Host ヘッダ書き換え / ADR-0014）
+          └─ GCP API Gateway（X-API-Key 認証 / ADR-0003）
+              ├─ GET  /health        → healthz（Cloud Functions）
+              └─ *    /v1/*          → vector-api（Cloud Functions）
+                  ├─ Firestore           ベクトル保存・検索
+                  ├─ GCS inputs/         登録メディア（30日 TTL）
+                  ├─ GCS queries/        検索クエリ画像（翌日 TTL / ADR-0018）
+                  ├─ Secret Manager      Gemini API Key
+                  └─ Gemini Embedding    2048 次元ベクトル生成
 ```
 
-メディアアップロードはクライアントが GCS へ直接 PUT する（API Gateway を経由しない）。詳細は [ADR-0017](docs/adr/0017-multimodal-media-upload-pattern.md)。
+詳細なシーケンス図・コンポーネント一覧は [`docs/architecture.md`](docs/architecture.md) を参照してください。  
+設計判断の経緯は [`docs/adr/`](docs/adr/) にまとめています。  
+セキュリティ設計は [`docs/security.md`](docs/security.md) を参照してください。
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ---
 
-## 技術スタック
+## Roadmap
 
-| レイヤー           | 採用                                   | 選定理由                                                        |
-| ------------------ | -------------------------------------- | --------------------------------------------------------------- |
-| インフラ管理       | Terraform                              | 構成のコード化。`tfstate` は GCS にロック付きで保存             |
-| フロントエンド     | **Cloudflare Pages**                   | 静的配信。`wrangler` でデプロイ。ビルドは Tailwind CSS のみ     |
-| DNS / TLS / Proxy  | Cloudflare                             | `riri-inferno.com` 配下のサブドメイン管理、エッジで TLS 終端    |
-| API 入口           | **GCP API Gateway**                    | OpenAPI 仕様で X-API-Key 認証・レート制限を肩代わり             |
-| 実行ランタイム     | **Cloud Functions Gen2 (Python 3.13)** | ゼロスケール。リクエストがない時間は完全に課金されない          |
-| 埋め込みモデル     | **`gemini-embedding-2`** (2048 次元)   | テキスト・画像・動画・音声・PDF を同一ベクトル空間に射影        |
-| ベクトル DB        | **Firestore** (`find_nearest`)         | ネイティブにベクトル検索対応。起動固定費なし                    |
-| メディアストレージ | Cloud Storage                          | 画像バイナリ等の保存。Firestore には GCS URI とベクトルのみ格納 |
-| シークレット管理   | Secret Manager + SOPS + KMS            | Gemini API Key を Cloud Functions に安全にマウント              |
+- [x] テキスト / 画像 クロスモーダル検索
+- [x] GCS Signed URL 直アップロード（API Gateway バイパス）
+- [x] ドキュメント削除（Firestore + GCS 連動）
+- [x] 手書きキャンバス検索（Signature Pad）
+- [x] クリップボード貼り付け検索（Ctrl+V）
+- [x] 検索結果フィルタ（すべて / 画像 / テキスト）
+- [x] GCS プレフィックス分離 + 検索クエリ画像の自動削除（ADR-0018）
+- [ ] デモデータ整備（動物画像 + テキスト）
+- [ ] metadata を活用した自動タグ付け（OCR / Gemini）
 
----
-
-## セキュリティ & コスト保護
-
-DDoS・課金暴騰に対する多層防御方針は [`docs/security.md`](docs/security.md) を参照。
-
-主要ポイント:
-
-- **認証**: API Gateway 段で X-API-Key 検証（[ADR-0003](docs/adr/0003-authentication.md)）。Cloud Functions は IAM で API GW からのみ受け付ける
-- **最小権限**: 関数ごとに専用 Service Account。`healthz` は Firestore/Storage へのアクセス権なし
-- **メディアバケット**: Public access prevention enforced / Uniform bucket-level access
-- **Signed URL**: アップロード用は 5 分間、ダウンロード用は短期 TTL のみ有効
-- **スケール上限**: Cloud Functions `max_instance_count = 3`（[ADR-0005](docs/adr/0005-cloud-functions-runtime-stack.md)）
-- Cloudflare 側の対策（WAF / Rate Limiting）は [home-raspi-iac](https://github.com/Riri-Inferno/home-raspi-iac) で管理
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ---
 
-## リポジトリ構成
+## License
 
-```
-.
-├── api/                  # OpenAPI 仕様 (openapi.yaml)
-├── docs/
-│   ├── adr/              # Architecture Decision Records
-│   ├── architecture.md   # 詳細アーキテクチャ・シーケンス図
-│   ├── security.md       # セキュリティ設計
-│   └── images/           # 構成図 PNG / drawio
-├── frontend/             # デモ UI (HTML + Tailwind CSS)
-│   ├── index.html
-│   ├── src/input.css
-│   ├── tailwind.config.js
-│   └── wrangler.toml     # Cloudflare Pages デプロイ設定
-├── functions/
-│   ├── healthz/          # GET /health (Python)
-│   └── vector-api/       # POST /v1/* (Python)
-├── terraform/
-│   ├── bootstrap/        # GCS バックエンド・WIF・CI SA
-│   └── gcp/              # GCP リソース全体
-├── secrets/              # SOPS 暗号化済みシークレット
-└── DESIGN.md             # AI エージェント向けデザインシステム定義
-```
+[Creative Commons Attribution-NonCommercial 4.0 International](LICENSE) の下で配布しています。
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ---
 
-## ADR 索引
+## Contact
 
-| ADR                                                               | 内容                                                            |
-| ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| [0001](docs/adr/0001-api-design-mvp.md)                           | API MVP 設計（エンドポイント・ID・スコア・エラー形式）          |
-| [0003](docs/adr/0003-authentication.md)                           | X-API-Key ヘッダ認証                                            |
-| [0005](docs/adr/0005-cloud-functions-runtime-stack.md)            | Cloud Functions Gen2 / Python / 関数分割粒度                    |
-| [0006](docs/adr/0006-secret-management-sops-kms.md)               | SOPS + KMS による Secret 管理                                   |
-| [0014](docs/adr/0014-cloudflare-worker-host-rewrite.md)           | Cloudflare Worker で Host ヘッダを書き換えて API Gateway へ接続 |
-| [0016](docs/adr/0016-embedding-dimension-2048-firestore-limit.md) | 埋め込み次元を 2048 に確定（Firestore 上限）                    |
-| [0017](docs/adr/0017-multimodal-media-upload-pattern.md)          | GCS Signed URL 直アップロード & Part.from_bytes                 |
+<!-- PLACEHOLDER: 下記をご自身の情報に差し替えてください -->
+
+Riri-Inferno - [@your_twitter](https://twitter.com/your_username)
+
+Project Link: [https://github.com/Riri-Inferno/gcp-serverless-vector-search](https://github.com/Riri-Inferno/gcp-serverless-vector-search)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## Acknowledgments
+
+- [Gemini Embedding API](https://ai.google.dev/gemini-api/docs/embeddings)
+- [Firestore Vector Search](https://firebase.google.com/docs/firestore/vector-search)
+- [Signature Pad](https://github.com/szimek/signature_pad) — MIT License
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
+- [Img Shields](https://shields.io)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+<!-- SHIELDS REFERENCE LINKS -->
+
+[stars-shield]: https://img.shields.io/github/stars/Riri-Inferno/gcp-serverless-vector-search.svg?style=for-the-badge
+[stars-url]: https://github.com/Riri-Inferno/gcp-serverless-vector-search/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Riri-Inferno/gcp-serverless-vector-search.svg?style=for-the-badge
+[issues-url]: https://github.com/Riri-Inferno/gcp-serverless-vector-search/issues
+[license-shield]: https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=for-the-badge
+[license-url]: LICENSE
+[python-shield]: https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white
+[python-url]: https://www.python.org/
+[terraform-shield]: https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white
+[terraform-url]: https://www.terraform.io/
+[cloudfunctions-shield]: https://img.shields.io/badge/Cloud%20Functions-Gen2-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white
+[cloudfunctions-url]: https://cloud.google.com/functions
+[firestore-shield]: https://img.shields.io/badge/Firestore-Vector%20Search-FF6F00?style=for-the-badge&logo=firebase&logoColor=white
+[firestore-url]: https://firebase.google.com/docs/firestore/vector-search
+[gcs-shield]: https://img.shields.io/badge/Cloud%20Storage-GCS-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white
+[gcs-url]: https://cloud.google.com/storage
+[apigw-shield]: https://img.shields.io/badge/API%20Gateway-OpenAPI-34A853?style=for-the-badge&logo=googlecloud&logoColor=white
+[apigw-url]: https://cloud.google.com/api-gateway
+[gemini-shield]: https://img.shields.io/badge/Gemini-Embedding%202-8E75B2?style=for-the-badge&logo=google&logoColor=white
+[gemini-url]: https://ai.google.dev/gemini-api/docs/embeddings
+[cloudflare-shield]: https://img.shields.io/badge/Cloudflare-Pages%20%2B%20Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white
+[cloudflare-url]: https://pages.cloudflare.com/
+[tailwind-shield]: https://img.shields.io/badge/Tailwind%20CSS-3.x-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white
+[tailwind-url]: https://tailwindcss.com/
+
+<!-- SCREENSHOT REFERENCE LINKS (コメントを外したら一緒に有効化してください) -->
+<!-- [product-screenshot]: docs/images/screenshot-demo.png -->
+<!-- [canvas-screenshot]: docs/images/screenshot-canvas.png -->
+<!-- [results-screenshot]: docs/images/screenshot-results.png -->

@@ -373,6 +373,36 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v1/documents/{document_id}:
+    delete:
+      summary: ドキュメントを削除（GCS メディアファイルも道連れ）
+      operationId: deleteDocument
+      description: |
+        Firestore のドキュメントを削除する。
+        gcs_uri が記録されている場合は GCS のメディアファイルも同時に削除する。
+      x-google-backend: vector_api_backend
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 削除対象のドキュメント ID
+      responses:
+        '204':
+          description: 削除成功（レスポンスボディなし）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ドキュメントが存在しない
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v1/search:
     post:
       summary: テキスト / メディアクエリで近傍ベクトル検索（クロスモーダル対応）

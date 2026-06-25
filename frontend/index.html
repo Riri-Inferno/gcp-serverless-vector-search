@@ -441,6 +441,44 @@
         "reg-dz-text",
       );
 
+      // ── Delete ───────────────────────────────────────────────
+      async function deleteDocument(id) {
+        const key = getApiKey();
+        if (!key) throw new Error("API Key が未設定");
+        const res = await fetch(`${API_BASE}/v1/documents/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: { "X-API-Key": key },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || data.title || `HTTP ${res.status}`);
+        }
+      }
+
+      async function confirmDeleteDoc(id) {
+        if (!confirm("このドキュメントを削除しますか？\nGCS のメディアファイルも削除されます。")) return;
+        try {
+          await deleteDocument(id);
+          document.querySelector(`[data-id="${id}"]`)?.remove();
+          updateFilterCounts();
+          toast("削除しました", "success");
+        } catch (e) {
+          toast("削除エラー: " + e.message, "error");
+        }
+      }
+
+      function updateFilterCounts() {
+        const grid = document.getElementById("results-grid");
+        let imageCount = 0, textCount = 0;
+        grid.querySelectorAll("[data-type]").forEach((card) => {
+          if (card.dataset.type === "image") imageCount++;
+          else textCount++;
+        });
+        document.getElementById("filter-count-image").textContent = imageCount || "";
+        document.getElementById("filter-count-text").textContent = textCount || "";
+        applyFilter();
+      }
+
       // ── API helpers ───────────────────────────────────────────
       async function apiFetch(path, body) {
         const key = getApiKey();
@@ -560,9 +598,15 @@
 
             const card = document.createElement("div");
             card.className =
-              "bg-surface-2 border border-stroke rounded-xl overflow-hidden hover:-translate-y-0.5 hover:border-accent transition-all";
+              "relative group bg-surface-2 border border-stroke rounded-xl overflow-hidden hover:-translate-y-0.5 hover:border-accent transition-all";
             card.dataset.type = isImage ? "image" : "text";
+            card.dataset.id = r.id;
             card.innerHTML = `
+      <button
+        class="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-black/50 hover:bg-danger text-white text-xs leading-none transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
+        onclick="confirmDeleteDoc('${esc(r.id)}')"
+        title="削除"
+      >×</button>
       ${thumbHtml}
       <div class="p-3">
         <div class="flex items-center gap-2 mb-1.5">

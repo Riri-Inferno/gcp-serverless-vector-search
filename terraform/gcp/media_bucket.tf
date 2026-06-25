@@ -18,7 +18,19 @@ resource "google_storage_bucket" "media_bucket" {
     max_age_seconds = 3600
   }
 
-  # デモデータが堆積して課金が跳ねないよう 30 日で自動削除
+  # 検索クエリ画像（queries/）は翌日自動削除（GCS Lifecycle 最小粒度 = 1 日）
+  # ADR 0018: 登録用（inputs/）と検索クエリ用（queries/）をプレフィックスで分離
+  lifecycle_rule {
+    condition {
+      age            = 1
+      matches_prefix = ["queries/"]
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  # 登録データを含む全オブジェクトのフォールバック: 30 日で自動削除
   lifecycle_rule {
     condition {
       age = 30

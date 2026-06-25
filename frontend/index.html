@@ -35,17 +35,17 @@
     </div>
 
     <!-- ── Main ── -->
-    <div class="max-w-5xl mx-auto px-6 py-6">
+    <div class="max-w-5xl mx-auto px-4 py-4 md:px-6 md:py-6">
       <!-- Tabs -->
       <div class="flex gap-1.5 mb-6">
         <button
-          class="tab-btn px-5 py-2 border rounded-lg text-sm transition-all"
+          class="tab-btn flex-1 md:flex-none px-5 py-2.5 border rounded-lg text-sm transition-all min-h-[44px]"
           data-tab="search"
         >
           検索
         </button>
         <button
-          class="tab-btn px-5 py-2 border rounded-lg text-sm transition-all"
+          class="tab-btn flex-1 md:flex-none px-5 py-2.5 border rounded-lg text-sm transition-all min-h-[44px]"
           data-tab="register"
         >
           登録
@@ -56,21 +56,21 @@
       <div id="tab-search" class="tab-panel">
         <div class="bg-surface border border-stroke rounded-xl p-6 mb-5">
           <!-- モード切り替え -->
-          <div class="flex gap-2 mb-5">
+          <div class="flex flex-wrap gap-2 mb-5">
             <button
-              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              class="mode-btn px-4 py-2 rounded-full border text-xs transition-all min-h-[36px]"
               data-mode="text"
             >
               テキスト
             </button>
             <button
-              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              class="mode-btn px-4 py-2 rounded-full border text-xs transition-all min-h-[36px]"
               data-mode="image"
             >
               画像
             </button>
             <button
-              class="mode-btn px-4 py-1.5 rounded-full border text-xs transition-all"
+              class="mode-btn px-4 py-2 rounded-full border text-xs transition-all min-h-[36px]"
               data-mode="both"
             >
               テキスト＋画像
@@ -99,7 +99,7 @@
                 type="file"
                 id="search-file"
                 accept="image/*"
-                class="absolute inset-0 opacity-0 cursor-pointer"
+                class="absolute inset-0 opacity-0 cursor-pointer z-10"
               />
               <div id="search-dz-icon" class="text-3xl mb-2">🔍</div>
               <div id="search-dz-text" class="text-muted text-sm">
@@ -137,14 +137,25 @@
 
         <!-- 検索結果 -->
         <div id="results-section" class="hidden">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-sm text-muted">検索結果</h3>
-            <span id="results-count" class="text-xs text-muted"></span>
+          <div class="flex flex-wrap justify-between items-center gap-y-3 mb-4">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm text-muted">検索結果</h3>
+              <span id="results-count" class="text-xs text-muted"></span>
+            </div>
+            <div class="flex gap-1.5">
+              <button class="filter-btn px-3 py-1 rounded-full border text-xs transition-all" data-filter="all">すべて</button>
+              <button class="filter-btn px-3 py-1 rounded-full border text-xs transition-all" data-filter="image">
+                画像 <span id="filter-count-image" class="ml-0.5 opacity-60"></span>
+              </button>
+              <button class="filter-btn px-3 py-1 rounded-full border text-xs transition-all" data-filter="text">
+                テキスト <span id="filter-count-text" class="ml-0.5 opacity-60"></span>
+              </button>
+            </div>
           </div>
           <div
             id="results-grid"
-            class="grid gap-4"
-            style="grid-template-columns: repeat(auto-fill, minmax(190px, 1fr))"
+            class="grid gap-3 md:gap-4"
+            style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))"
           ></div>
         </div>
       </div>
@@ -179,7 +190,7 @@
               type="file"
               id="reg-file"
               accept="image/*,video/*,audio/*,application/pdf"
-              class="absolute inset-0 opacity-0 cursor-pointer"
+              class="absolute inset-0 opacity-0 cursor-pointer z-10"
             />
             <div id="reg-dz-icon" class="text-3xl mb-2">📁</div>
             <div id="reg-dz-text" class="text-muted text-sm">
@@ -302,6 +313,49 @@
       document
         .querySelector('[data-tab="search"]')
         .classList.add(...TAB_ACTIVE);
+
+      // ── Result Filters ───────────────────────────────────────
+      let currentFilter = 'all';
+      const FILTER_ACTIVE = ['border-accent-2', 'text-accent-2', 'bg-surface-2'];
+      const FILTER_INACTIVE = ['border-stroke', 'text-muted'];
+
+      document.querySelectorAll('.filter-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach((b) => {
+            b.classList.remove(...FILTER_ACTIVE);
+            b.classList.add(...FILTER_INACTIVE);
+          });
+          btn.classList.add(...FILTER_ACTIVE);
+          btn.classList.remove(...FILTER_INACTIVE);
+          currentFilter = btn.dataset.filter;
+          applyFilter();
+        });
+        btn.classList.add(...FILTER_INACTIVE);
+      });
+
+      function applyFilter() {
+        const grid = document.getElementById('results-grid');
+        let shown = 0, total = 0;
+        grid.querySelectorAll('[data-type]').forEach((card) => {
+          total++;
+          const matches = currentFilter === 'all' || card.dataset.type === currentFilter;
+          card.style.display = matches ? '' : 'none';
+          if (matches) shown++;
+        });
+        document.getElementById('results-count').textContent =
+          currentFilter === 'all' ? `${total} 件` : `${shown} / ${total} 件`;
+      }
+
+      function resetFilter() {
+        currentFilter = 'all';
+        document.querySelectorAll('.filter-btn').forEach((b) => {
+          b.classList.remove(...FILTER_ACTIVE);
+          b.classList.add(...FILTER_INACTIVE);
+        });
+        const allBtn = document.querySelector('[data-filter="all"]');
+        allBtn.classList.add(...FILTER_ACTIVE);
+        allBtn.classList.remove(...FILTER_INACTIVE);
+      }
 
       // ── Search Mode ───────────────────────────────────────────
       const MODE_ACTIVE = ["bg-surface-2", "border-accent-2", "text-accent-2"];
@@ -465,10 +519,10 @@
       async function renderResults(results) {
         const section = document.getElementById("results-section");
         const grid = document.getElementById("results-grid");
-        document.getElementById("results-count").textContent =
-          `${results.length} 件`;
         section.classList.remove("hidden");
         grid.innerHTML = "";
+        resetFilter();
+        document.getElementById("results-count").textContent = `${results.length} 件`;
 
         // skeleton cards
         results.forEach(() => {
@@ -483,6 +537,7 @@
           grid.appendChild(sk);
         });
 
+        let imageCount = 0, textCount = 0;
         await Promise.all(
           results.map(async (r, i) => {
             const isImage = !!r.gcs_uri;
@@ -493,7 +548,7 @@
               isImage && thumbUrl
                 ? `<img src="${thumbUrl}" alt="" class="w-full aspect-square object-cover block" loading="lazy">`
                 : isImage
-                  ? `<div class="w-full aspect-square bg-surface flex items-center justify-content-center text-3xl p-4 text-center text-muted text-xs leading-relaxed">🖼️<br>${esc(r.gcs_uri.split("/").pop())}</div>`
+                  ? `<div class="w-full aspect-square bg-surface flex items-center justify-center text-3xl p-4 text-center text-muted text-xs leading-relaxed">🖼️<br>${esc(r.gcs_uri.split("/").pop())}</div>`
                   : `<div class="w-full aspect-square bg-surface flex items-center justify-center p-3 text-muted text-xs leading-relaxed text-center">${esc((r.text ?? "").slice(0, 80))}</div>`;
 
             const badgeCls = isImage
@@ -501,9 +556,12 @@
               : "bg-accent-2/20 text-accent-2";
             const badgeLabel = isImage ? "画像" : "テキスト";
 
+            if (isImage) imageCount++; else textCount++;
+
             const card = document.createElement("div");
             card.className =
               "bg-surface-2 border border-stroke rounded-xl overflow-hidden hover:-translate-y-0.5 hover:border-accent transition-all";
+            card.dataset.type = isImage ? "image" : "text";
             card.innerHTML = `
       ${thumbHtml}
       <div class="p-3">
@@ -519,6 +577,8 @@
             grid.children[i].replaceWith(card);
           }),
         );
+        document.getElementById("filter-count-image").textContent = imageCount || "";
+        document.getElementById("filter-count-text").textContent = textCount || "";
       }
 
       // ── Register Text ─────────────────────────────────────────

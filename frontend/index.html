@@ -877,6 +877,42 @@
         if (e.key === "Escape") closeCanvasModal();
       });
 
+      // ── Ctrl+V 画像貼り付け検索 ───────────────────────────────
+      document.getElementById("search-dropzone").addEventListener("paste", async (e) => {
+        const items = Array.from(e.clipboardData?.items ?? []);
+        const imageItem = items.find((it) => it.type.startsWith("image/"));
+        if (!imageItem) return;
+        e.preventDefault();
+
+        const file = imageItem.getAsFile();
+        if (!file) return;
+
+        // プレビュー表示
+        const pv = document.getElementById("search-preview");
+        pv.src = URL.createObjectURL(file);
+        pv.classList.remove("hidden");
+        document.getElementById("search-dz-icon").classList.add("hidden");
+        document.getElementById("search-dz-text").classList.add("hidden");
+
+        // 即検索
+        const btn = document.getElementById("search-btn");
+        btn.disabled = true;
+        btn.textContent = "検索中...";
+        try {
+          toast("クリップボード画像をアップロード中...", "info");
+          const gcsUri = await uploadFile(file);
+          const topK = parseInt(document.getElementById("search-topk").value) || 10;
+          await renderResults(
+            (await apiFetch("/v1/search", { gcs_uri: gcsUri, top_k: topK })).results,
+          );
+        } catch (err) {
+          toast("検索エラー: " + err.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "検索";
+        }
+      });
+
       // ── Utilities ─────────────────────────────────────────────
       function setBar(bar, pct) {
         bar.style.width = pct + "%";

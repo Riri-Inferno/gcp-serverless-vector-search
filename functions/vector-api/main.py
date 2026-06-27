@@ -23,6 +23,7 @@ import json
 from flask import Response
 from google import genai
 from google.cloud import firestore, storage
+from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 from google.cloud.firestore_v1.vector import Vector
 from google.genai import types
@@ -146,6 +147,43 @@ def _parse_gcs_uri(gcs_uri: str) -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Modality (ADR 0019)
+# ---------------------------------------------------------------------------
+ALL_MODALITIES: tuple[str, ...] = ("text", "image", "audio", "video", "pdf")
+
+
+def get_blob_content_type(gcs_uri: str) -> str | None:
+    """GCS blob の content_type を取得する。エラー時は None。"""
+    try:
+        bucket_name, blob_path = _parse_gcs_uri(gcs_uri)
+        blob = get_storage_client().bucket(bucket_name).blob(blob_path)
+        blob.reload()
+        return blob.content_type
+    except Exception:
+        logger.warning("Failed to fetch content_type for %s", gcs_uri, exc_info=True)
+        return None
+
+
+def derive_modality(text: str | None, gcs_uri: str | None, content_type: str | None) -> str:
+    """ADR 0019: text / gcs_uri / content_type からモダリティを派生する。
+
+    優先順位は gcs_uri 側を採用 (主たるメディア種別)。両方が存在する場合も gcs_uri を優先。
+    """
+    if gcs_uri:
+        if content_type:
+            if content_type.startswith("image/"):
+                return "image"
+            if content_type.startswith("video/"):
+                return "video"
+            if content_type.startswith("audio/"):
+                return "audio"
+            if content_type == "application/pdf":
+                return "pdf"
+        return "unknown"
+    return "text"
+
+
+# ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
 def handle_get_upload_url(request) -> Response:
@@ -227,6 +265,10 @@ def handle_create_document(request) -> Response:
         logger.exception("embedding generation failed")
         return problem("internal_error", "Embedding generation failed", 500)
 
+    # ADR 0019: modality を派生して Firestore に保存する
+    blob_content_type = get_blob_content_type(payload.gcs_uri) if payload.gcs_uri else None
+    modality = derive_modality(payload.text, payload.gcs_uri, blob_content_type)
+
     doc_id = str(uuid.uuid4())
     doc_ref = get_firestore_client().collection(COLLECTION).document(doc_id)
 
@@ -238,6 +280,7 @@ def handle_create_document(request) -> Response:
                 "metadata": payload.metadata.model_dump() if payload.metadata else {},
                 EMBEDDING_FIELD: Vector(embedding),
                 "embedding_model": EMBEDDING_MODEL,
+                "modality": modality,
                 "created_at": firestore.SERVER_TIMESTAMP,
             }
         )
@@ -250,6 +293,7 @@ def handle_create_document(request) -> Response:
         id=doc_id,
         text=payload.text,
         gcs_uri=payload.gcs_uri,
+        modality=modality,
         metadata=payload.metadata,
         created_at=saved.create_time,
     ).model_dump(mode="json", exclude_none=True)
@@ -286,6 +330,43 @@ def handle_delete_document(request, doc_id: str) -> Response:
     return Response("", status=204)
 
 
+def _snapshot_to_result(snap) -> SearchResult:
+    data = snap.to_dict() or {}
+    distance = float(data.get(DISTANCE_RESULT_FIELD, 1.0))
+    # COSINE distance は Firestore 仕様で「1 - cosine_similarity」が返る前提 (ADR 0001)。
+    score = max(0.0, min(1.0, 1.0 - distance))
+    return SearchResult(
+        id=snap.id,
+        text=data.get("text") or None,
+        gcs_uri=data.get("gcs_uri") or None,
+        modality=data.get("modality") or None,
+        metadata=data.get("metadata") or None,
+        score=score,
+    )
+
+
+def _find_nearest(
+    collection_ref,
+    query_vector: list[float],
+    limit: int,
+    modality_filter: str | None = None,
+    modality_in: list[str] | None = None,
+):
+    """find_nearest のラッパー。任意の modality filter を pre-filter として適用できる。"""
+    query = collection_ref
+    if modality_filter is not None:
+        query = query.where(filter=FieldFilter("modality", "==", modality_filter))
+    elif modality_in is not None:
+        query = query.where(filter=FieldFilter("modality", "in", modality_in))
+    return query.find_nearest(
+        vector_field=EMBEDDING_FIELD,
+        query_vector=Vector(query_vector),
+        distance_measure=DistanceMeasure.COSINE,
+        limit=limit,
+        distance_result_field=DISTANCE_RESULT_FIELD,
+    )
+
+
 def handle_search(request) -> Response:
     try:
         payload = SearchRequest.model_validate_json(request.get_data())
@@ -298,37 +379,38 @@ def handle_search(request) -> Response:
         logger.exception("query embedding failed")
         return problem("internal_error", "Embedding generation failed", 500)
 
+    collection_ref = get_firestore_client().collection(COLLECTION)
+
     try:
-        vector_query = get_firestore_client().collection(COLLECTION).find_nearest(
-            vector_field=EMBEDDING_FIELD,
-            query_vector=Vector(query_vector),
-            distance_measure=DistanceMeasure.COSINE,
-            limit=payload.top_k,
-            distance_result_field=DISTANCE_RESULT_FIELD,
-        )
-        snapshots = list(vector_query.stream())
+        if payload.mix_modalities:
+            # ADR 0019: 同モダリティ top_k/2 + 異モダリティ top_k - top_k/2 を取得して merge する。
+            blob_content_type = (
+                get_blob_content_type(payload.gcs_uri) if payload.gcs_uri else None
+            )
+            query_modality = derive_modality(payload.query, payload.gcs_uri, blob_content_type)
+            other_modalities = [m for m in ALL_MODALITIES if m != query_modality]
+
+            same_limit = max(1, payload.top_k // 2)
+            other_limit = max(1, payload.top_k - same_limit)
+
+            same_q = _find_nearest(
+                collection_ref, query_vector, same_limit, modality_filter=query_modality
+            )
+            other_q = _find_nearest(
+                collection_ref, query_vector, other_limit, modality_in=other_modalities
+            )
+
+            snapshots = list(same_q.stream()) + list(other_q.stream())
+            snapshots.sort(key=lambda s: (s.to_dict() or {}).get(DISTANCE_RESULT_FIELD, 1.0))
+            snapshots = snapshots[: payload.top_k]
+        else:
+            vector_query = _find_nearest(collection_ref, query_vector, payload.top_k)
+            snapshots = list(vector_query.stream())
     except Exception:
         logger.exception("firestore find_nearest failed")
         return problem("internal_error", "Vector search failed", 500)
 
-    results: list[SearchResult] = []
-    for snap in snapshots:
-        data = snap.to_dict() or {}
-        distance = float(data.get(DISTANCE_RESULT_FIELD, 1.0))
-        # COSINE distance ∈ [0, 2]、similarity = 1 - distance/2 とする実装もあるが、
-        # Firestore は正規化済みベクトルを前提とした「1 - cosine_similarity」を返すため、
-        # similarity = 1 - distance で扱う (ADR 0001)。
-        score = max(0.0, min(1.0, 1.0 - distance))
-        results.append(
-            SearchResult(
-                id=snap.id,
-                text=data.get("text") or None,
-                gcs_uri=data.get("gcs_uri") or None,
-                metadata=data.get("metadata") or None,
-                score=score,
-            )
-        )
-
+    results = [_snapshot_to_result(snap) for snap in snapshots]
     response = SearchResponse(results=results).model_dump(mode="json", exclude_none=True)
     return _json(response, 200)
 

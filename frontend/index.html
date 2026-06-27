@@ -192,7 +192,7 @@
             </div>
           </div>
 
-          <!-- 件数 + 検索ボタン -->
+          <!-- 件数 + クロスモーダル + 検索ボタン -->
           <div class="flex items-end gap-3">
             <div>
               <label class="block text-xs text-muted mb-1.5">件数</label>
@@ -203,6 +203,14 @@
                 class="w-16 text-center bg-surface-2 border border-stroke rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors"
               />
             </div>
+            <label class="flex items-center gap-2 px-3 py-2 text-sm text-muted cursor-pointer select-none" title="同モダリティと異モダリティを半々で取得して merge する (ADR 0019)">
+              <input
+                type="checkbox"
+                id="search-mix-modalities"
+                class="w-4 h-4 accent-accent-2 cursor-pointer"
+              />
+              クロスモーダル
+            </label>
             <button
               id="search-btn"
               onclick="runSearch()"
@@ -695,8 +703,9 @@
         const file = document.getElementById("search-file").files[0];
         const topK =
           parseInt(document.getElementById("search-topk").value) || 10;
+        const mixModalities = document.getElementById("search-mix-modalities").checked;
 
-        const body = { top_k: topK };
+        const body = { top_k: topK, mix_modalities: mixModalities };
         if ((mode === "text" || mode === "both") && query) body.query = query;
 
         if ((mode === "image" || mode === "both") && file) {
@@ -1058,9 +1067,13 @@
             const gcsUri = await uploadFile(file, null, "query");
             const topK =
               parseInt(document.getElementById("search-topk").value) || 10;
+            const mixModalities = document.getElementById("search-mix-modalities").checked;
             await renderResults(
-              (await apiFetch("/v1/search", { gcs_uri: gcsUri, top_k: topK }))
-                .results,
+              (await apiFetch("/v1/search", {
+                gcs_uri: gcsUri,
+                top_k: topK,
+                mix_modalities: mixModalities,
+              })).results,
             );
           } catch (err) {
             toast("検索エラー: " + err.message, "error");

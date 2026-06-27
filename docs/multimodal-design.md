@@ -108,7 +108,7 @@ sequenceDiagram
 
 ## マルチモーダル検索フロー
 
-検索クエリはテキストのみ。テキスト埋め込みと保存済みメディア埋め込みを同一ベクトル空間で比較するため、自然言語クエリで画像や音声がヒットする。
+検索クエリはテキスト・メディア (`gcs_uri`) のいずれか or 両方を受け付ける。`gemini-embedding-2` がクエリと保存済みドキュメントを同一の 2048 次元ベクトル空間に射影し、Firestore の `find_nearest` で近傍探索する。
 
 ```mermaid
 sequenceDiagram
@@ -117,21 +117,41 @@ sequenceDiagram
     participant Gemini as Gemini API
     participant FS as Firestore
 
-    C->>Fn: POST /v1/search<br/>{"query":"夕焼けの写真","top_k":10}
-    Fn->>Gemini: embed_content(<br/>  contents=[query],<br/>  task_type="RETRIEVAL_QUERY"<br/>)
+    C->>Fn: POST /v1/search<br/>{"query":"夕焼けの写真","top_k":10, "mix_modalities":false}
+    Fn->>Gemini: embed_content(<br/>  contents=[query, Part.from_bytes(...)?]<br/>)
     Gemini-->>Fn: query_vector[2048]
     Fn->>FS: find_nearest(<br/>  query_vector,<br/>  distance_type=COSINE,<br/>  limit=top_k<br/>)
-    FS-->>Fn: [{id, embedding, text, gcs_uri, metadata, distance}]
+    FS-->>Fn: [{id, embedding, text, gcs_uri, modality, metadata, distance}]
     Fn->>Fn: score = 1 - distance
-    Fn-->>C: 200 OK<br/>{"results":[{id,text,gcs_uri,score,metadata}]}
+    Fn-->>C: 200 OK<br/>{"results":[{id,text,gcs_uri,modality,score,metadata}]}
 ```
 
-**マルチモーダル検索が成立する仕組み**
+### マルチモーダル検索の実態と modality gap
 
-Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の2048次元ベクトル空間(次元数は設定可能)**に射影する。
-登録時に GCS からバイナリをダウンロードして `Part.from_bytes(data, mime_type)` でインライン渡しするため、「夕焼けの写真」というテキストクエリと、画像から生成されたベクトルが近傍に来る。
-> **実装メモ**: Google AI Studio (API Key 認証) は `Part.from_uri("gs://...")` を直接サポートしない。
-> そのため Storage SDK でダウンロード後にインラインデータとして渡す。
+技術仕様上、`gemini-embedding-2` はテキスト・画像・音声・動画・PDF をすべて **同一の 2048 次元ベクトル空間** に射影する。理論上はテキストクエリで画像が、画像クエリでテキストがヒットする（クロスモーダル検索）。
+
+しかし [2026-06-23 の実測](measurements/2026-06-23-modality-gap.md) で、`gemini-embedding-2` の **modality gap**（同モダリティ内ペアと異モダリティ間ペアで cosine 距離が大きく異なる現象）が極端に大きいことが判明した。3 種類のテキストクエリで `top_k=50` を計測したところ、すべてのケースで 50 / 50 件が TXT、IMG が 1 件もヒットしない結果になっており、joint embedding と謳う公式仕様にもかかわらず実用上のクロスモーダル検索は弱い。
+
+この modality gap を迂回するため、本システムは検索リクエストに `mix_modalities: true` を指定すると、Firestore の composite vector index + WHERE filter で **同モダリティで `top_k/2` + 異モダリティで `top_k/2`** を 2 回 `find_nearest` して結果を merge する擬似クロスモーダル経路を提供する。設計判断の経緯と trade-off は [ADR 0019](adr/0019-mix-modalities-filter-based-cross-modal.md) を参照。
+
+```mermaid
+sequenceDiagram
+    participant C as クライアント
+    participant Fn as Cloud Functions
+    participant FS as Firestore
+
+    Note over C,FS: mix_modalities=true (擬似クロスモーダル)
+    C->>Fn: POST /v1/search<br/>{"query":"猫","top_k":10,"mix_modalities":true}
+    Fn->>Fn: derive_modality("猫") = "text"
+    Fn->>FS: ① where(modality=="text") + find_nearest(limit=5)
+    FS-->>Fn: 同モダリティ 5 件
+    Fn->>FS: ② where(modality in ["image","audio","video","pdf"]) + find_nearest(limit=5)
+    FS-->>Fn: 異モダリティ 5 件
+    Fn->>Fn: merge & sort by distance
+    Fn-->>C: 200 OK 10 件 (テキスト 5 + 画像等 5)
+```
+
+> **実装メモ**: Google AI Studio (API Key 認証) は `Part.from_uri("gs://...")` を直接サポートしない。そのため Storage SDK でダウンロード後にインラインデータ (`Part.from_bytes(data, mime_type)`) として渡す。
 
 ---
 
@@ -219,12 +239,16 @@ Gemini の `gemini-embedding-2` はテキスト・画像・音声を**同一の2
 
 ```
 documents/{uuid}:
-  text:       string | null        # テキストのみ / テキスト+メディア登録時に存在
-  gcs_uri:    string | null        # メディア登録時に存在 (gs://bucket/inputs/uuid.ext)
-  metadata:   object               # 自由形式（既存）
-  embedding:  vector(2048)         # Gemini gemini-embedding-2 の出力
+  text:             string | null        # テキストのみ / テキスト+メディア登録時に存在
+  gcs_uri:          string | null        # メディア登録時に存在 (gs://bucket/inputs/uuid.ext)
+  metadata:         object               # 自由形式（既存）
+  embedding:        vector(2048)         # Gemini gemini-embedding-2 の出力
+  embedding_model:  string                # 例: "gemini-embedding-2" (ADR 0004)
+  modality:         string                # "text" / "image" / "audio" / "video" / "pdf" (ADR 0019)
   // createTime / updateTime は Firestore が自動付与
 ```
+
+`modality` は登録時に `gcs_uri` の content_type から派生（gcs_uri がなければ "text"）。`mix_modalities` の filter 用 + UI 表示用に使う。詳細ルールは [ADR 0019](adr/0019-mix-modalities-filter-based-cross-modal.md) 参照。
 
 **埋め込みのインターリーブ入力パターン**
 

@@ -152,6 +152,12 @@ components:
         gcs_uri:
           type: string
           description: 保存済みメディアファイルの GCS URI
+        modality:
+          type: string
+          enum: [text, image, audio, video, pdf, unknown]
+          description: |
+            ドキュメントのモダリティ。検索フィルタ・UI 表示用 (ADR 0019)。
+            gcs_uri の content_type から派生し、text のみの場合は "text"。
         metadata:
           $ref: '#/components/schemas/Metadata'
         created_at:
@@ -192,6 +198,13 @@ components:
           maximum: 50
           default: 10
           description: 返却する近傍件数
+        mix_modalities:
+          type: boolean
+          default: false
+          description: |
+            true のとき、同モダリティで top_k/2 + 異モダリティで top_k/2 を取得してマージする。
+            Gemini Embedding API の modality gap (joint embedding でも実用上同モダリティが
+            上位を占有する現象) への対処。詳細は docs/adr/0019 を参照。
 
     SearchResult:
       type: object
@@ -205,6 +218,10 @@ components:
         gcs_uri:
           type: string
           description: メディアファイルの GCS URI（メディアドキュメントの場合のみ）
+        modality:
+          type: string
+          enum: [text, image, audio, video, pdf, unknown]
+          description: 結果のモダリティ (ADR 0019)。
         metadata:
           $ref: '#/components/schemas/Metadata'
         score:

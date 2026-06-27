@@ -49,10 +49,14 @@ class DocumentCreateRequest(BaseModel):
         return self
 
 
+Modality = Literal["text", "image", "audio", "video", "pdf", "unknown"]
+
+
 class Document(BaseModel):
     id: str
     text: str | None = None
     gcs_uri: str | None = None
+    modality: Modality | None = None  # ADR 0019: 検索フィルタ・UI 表示用
     metadata: Metadata | None = None
     created_at: datetime
 
@@ -61,6 +65,7 @@ class SearchRequest(BaseModel):
     query: str | None = Field(default=None, min_length=1, max_length=8000)
     gcs_uri: str | None = Field(default=None, pattern=r"^gs://.+")
     top_k: int = Field(default=10, ge=1, le=50)
+    mix_modalities: bool = False  # ADR 0019: クロスモーダル擬似検索の切替
 
     @model_validator(mode="after")
     def at_least_one_required(self) -> "SearchRequest":
@@ -73,6 +78,7 @@ class SearchResult(BaseModel):
     id: str
     text: str | None = None
     gcs_uri: str | None = None
+    modality: Modality | None = None  # ADR 0019: 結果のモダリティ
     metadata: Metadata | None = None
     score: float = Field(ge=0, le=1)
 

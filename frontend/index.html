@@ -203,6 +203,13 @@
                 class="w-16 text-center bg-surface-2 border border-stroke rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors"
               />
             </div>
+            <button
+              id="search-btn"
+              onclick="runSearch()"
+              class="px-6 py-2 bg-accent-2 hover:bg-accent-2/80 text-bg rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              検索
+            </button>
             <label class="flex items-center gap-2 px-3 py-2 text-sm text-muted cursor-pointer select-none" title="同モダリティと異モダリティを半々で取得して merge する (ADR 0019)">
               <input
                 type="checkbox"
@@ -211,13 +218,6 @@
               />
               クロスモーダル
             </label>
-            <button
-              id="search-btn"
-              onclick="runSearch()"
-              class="px-6 py-2 bg-accent-2 hover:bg-accent-2/80 text-bg rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              検索
-            </button>
           </div>
         </div>
 

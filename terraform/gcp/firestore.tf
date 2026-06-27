@@ -52,3 +52,31 @@ resource "google_firestore_index" "documents_embedding" {
     }
   }
 }
+
+# ADR 0019: `mix_modalities` (filter ベース) クロスモーダル検索用 composite vector index。
+# WHERE modality == "X" (および in [...]) と find_nearest を組み合わせるために必須。
+# 既存の single field vector index は維持し、`mix_modalities=false` 時は従来通り使用する。
+resource "google_firestore_index" "documents_modality_embedding" {
+  project     = var.project_id
+  database    = google_firestore_database.default.name
+  collection  = "documents"
+  query_scope = "COLLECTION"
+
+  fields {
+    field_path = "modality"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "__name__"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "embedding"
+    vector_config {
+      dimension = 2048
+      flat {}
+    }
+  }
+}

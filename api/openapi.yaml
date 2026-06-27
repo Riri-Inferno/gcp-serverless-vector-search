@@ -1,0 +1,455 @@
+openapi: 3.0.4
+
+info:
+  title: gcp-serverless-vector-search API
+  description: |
+    マルチモーダル対応のサーバーレス・ベクトル検索 API。
+    テキスト・画像・音声・動画・PDF の登録とクロスモーダル検索を提供する。
+
+    設計判断の経緯は `docs/adr/` を参照:
+      - 0001 API MVP 設計（エンドポイント / ID / メタデータ / スコア / エラー）
+      - 0002 OpenAPI 3.0.4 採用
+      - 0003 X-API-Key ヘッダ認証
+  version: 0.1.0
+  contact:
+    name: riri-vector-lab-2026
+
+servers:
+  - url: https://vector-search.riri-inferno.com
+    description: 本番エンドポイント (Cloudflare 経由 / API Gateway へプロキシ)
+
+# 本ファイルは Terraform の templatefile() で読まれる「テンプレート」を兼ねている。
+# `${healthz_url}` / `${vector_api_url}` は terraform apply 時に Cloud Function の
+# 実 URL に置換される (terraform/gcp/api_gateway.tf 参照)。
+#
+# GCP API Gateway の OpenAPI 3.x 仕様では x-google-backend を operation に object で
+# 直書きできず、必ず x-google-api-management.backends で named backend を定義した上で
+# operation 側は名前文字列で参照する形式を要求する (Cannot convert to service config エラー対策)。
+
+x-google-api-management:
+  backends:
+    # healthz は /health (z なし) として公開する。
+    # GCP Cloud Run は末尾が z のパスを予約済みとして扱い、API Gateway / ESP 層で
+    # Google Frontend が 404 を返す（Cloud Run known issues 参照）。
+    # CONSTANT_ADDRESS で Cloud Function root に転送する。
+    healthz_backend:
+      address: ${healthz_url}/
+      path_translation: CONSTANT_ADDRESS
+      jwt_audience: ${healthz_url}
+    # vector_api は path で operation を分岐するため APPEND が必須。
+    vector_api_backend:
+      address: ${vector_api_url}
+      path_translation: APPEND_PATH_TO_ADDRESS
+      jwt_audience: ${vector_api_url}
+
+security:
+  - google_api_key: []
+
+components:
+
+  securitySchemes:
+    google_api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+
+  schemas:
+
+    DownloadUrlRequest:
+      type: object
+      required: [gcs_uri]
+      properties:
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: ダウンロード対象のメディアファイル URI (gs://bucket/path)
+
+    DownloadUrlResponse:
+      type: object
+      required: [download_url]
+      properties:
+        download_url:
+          type: string
+          format: uri
+          description: 1 時間有効な GCS V4 Signed URL (GET)。ブラウザで直接表示可能。
+
+    UploadUrlRequest:
+      type: object
+      required: [filename, content_type]
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          description: |
+            アップロードするファイルのオリジナルファイル名（拡張子を含む）。
+            サーバーは拡張子のみを使用し、GCS オブジェクト名は UUID で採番する。
+        content_type:
+          type: string
+          minLength: 1
+          description: |
+            アップロードするファイルの MIME タイプ。
+            gemini-embedding-2 が受け入れる型のみ許可。
+            例: image/jpeg, application/pdf, video/mp4, audio/mp3
+        purpose:
+          type: string
+          enum: [document, query]
+          default: document
+          description: |
+            アップロード用途。
+            `document`: ドキュメント登録用（GCS `inputs/` プレフィックス、Firestore に gcs_uri が記録される）。
+            `query`: 検索クエリ画像用（GCS `queries/` プレフィックス、翌日自動削除）。
+            省略時は `document` として扱う。
+
+    UploadUrlResponse:
+      type: object
+      required: [upload_url, gcs_uri]
+      properties:
+        upload_url:
+          type: string
+          format: uri
+          description: |
+            5 分間有効な GCS V4 Signed URL (PUT)。
+            クライアントはこの URL に Content-Type ヘッダ付きで PUT すること。
+        gcs_uri:
+          type: string
+          description: |
+            アップロード先の GCS URI (gs://bucket/path)。
+            PUT 完了後に POST /v1/documents の gcs_uri フィールドに渡す。
+
+    DocumentCreateRequest:
+      type: object
+      description: |
+        text と gcs_uri は少なくとも一方が必須。
+        両方指定した場合はマルチモーダル入力として扱い、結合して埋め込む。
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 8000
+          description: |
+            埋め込み対象テキスト。
+            gemini-embedding-2 の入力上限は 8192 トークンだが、文字数で 8000 を上限としておく
+            (実トークン数より少し余裕を持たせる安全側設定)。
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: |
+            GCS に事前アップロード済みのメディアファイル URI (gs://bucket/path)。
+            POST /v1/documents/upload-url で取得した gcs_uri を指定する。
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+
+    Document:
+      type: object
+      required: [id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: サーバー生成の UUID v4
+        text:
+          type: string
+        gcs_uri:
+          type: string
+          description: 保存済みメディアファイルの GCS URI
+        modality:
+          type: string
+          enum: [text, image, audio, video, pdf, unknown]
+          description: |
+            ドキュメントのモダリティ。検索フィルタ・UI 表示用 (ADR 0019)。
+            gcs_uri の content_type から派生し、text のみの場合は "text"。
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        created_at:
+          type: string
+          format: date-time
+          description: Firestore の createTime をそのまま返す
+
+    Metadata:
+      type: object
+      additionalProperties: true
+      maxProperties: 50
+      description: |
+        ドキュメントに付随する自由形式の情報。スキーマは固定しない。
+        シリアライズ後 4KB を目安とする。
+        例: { "source": "https://...", "category": "tech", "tags": ["python"] }
+
+    SearchRequest:
+      type: object
+      description: |
+        query と gcs_uri は少なくとも一方が必須。
+        gcs_uri を指定するとメディアファイルをクエリとした画像検索・音声検索が可能。
+        両方指定した場合はマルチモーダル入力として結合して埋め込む。
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 8000
+          description: テキストクエリ。gcs_uri との併用も可。
+        gcs_uri:
+          type: string
+          pattern: '^gs://.+'
+          description: |
+            GCS に事前アップロード済みのメディアファイル URI (gs://bucket/path)。
+            POST /v1/documents/upload-url で取得した gcs_uri を指定する。
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+          description: 返却する近傍件数
+        mix_modalities:
+          type: boolean
+          default: false
+          description: |
+            true のとき、同モダリティで top_k/2 + 異モダリティで top_k/2 を取得してマージする。
+            Gemini Embedding API の modality gap (joint embedding でも実用上同モダリティが
+            上位を占有する現象) への対処。詳細は docs/adr/0019 を参照。
+
+    SearchResult:
+      type: object
+      required: [id, score]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        gcs_uri:
+          type: string
+          description: メディアファイルの GCS URI（メディアドキュメントの場合のみ）
+        modality:
+          type: string
+          enum: [text, image, audio, video, pdf, unknown]
+          description: 結果のモダリティ (ADR 0019)。
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: cosine similarity (1.0 = 同一)
+
+    SearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+
+    HealthzResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      description: |
+        RFC 7807 風のエラーレスポンス。`type` は URI ではなく短いスラグ文字列。
+      properties:
+        type:
+          type: string
+          description: エラー種別のスラグ。例 "validation_error" / "unauthorized" / "payload_too_large" / "internal_error"
+        title:
+          type: string
+          description: 人間可読の簡潔メッセージ
+        status:
+          type: integer
+          description: HTTP ステータスコード
+        detail:
+          type: string
+          description: 詳細メッセージ（任意）
+
+  responses:
+
+    ValidationError:
+      description: リクエストバリデーション失敗
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    Unauthorized:
+      description: API Key 不在 / 不一致
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    PayloadTooLarge:
+      description: リクエスト本体がサイズ上限超過
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+    InternalError:
+      description: サーバー内部エラー
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+paths:
+
+  /health:
+    get:
+      summary: 死活監視
+      operationId: healthz
+      # GCP API Gateway は API Key 認証を持たない operation を service config に
+      # 含めない仕様のため、global security (X-API-Key) を継承する (ADR 0008)。
+      x-google-backend: healthz_backend
+      responses:
+        '200':
+          description: 稼働中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthzResponse'
+
+  /v1/media/download-url:
+    post:
+      summary: GCS メディアファイルのダウンロード用 Signed URL を発行
+      operationId: getDownloadUrl
+      description: |
+        検索結果の gcs_uri をブラウザで表示するための GET 用 Signed URL を返す。
+        Signed URL は 1 時間有効。
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadUrlRequest'
+      responses:
+        '200':
+          description: Signed URL 発行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/documents/upload-url:
+    post:
+      summary: メディアファイルアップロード用の Signed URL を発行
+      operationId: getUploadUrl
+      description: |
+        クライアントはこの URL に対して PUT でファイルを直接 GCS にアップロードする。
+        アップロード完了後、返却された gcs_uri を POST /v1/documents の gcs_uri フィールドに指定して
+        埋め込み登録を行う。
+        API Gateway にファイルを直接送信しないことで、大容量ファイルの帯域・コストを削減する設計。
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Signed URL 発行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/documents:
+    post:
+      summary: コンテンツを埋め込みベクトル化してドキュメントとして保存
+      operationId: createDocument
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreateRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/documents/{document_id}:
+    delete:
+      summary: ドキュメントを削除（GCS メディアファイルも道連れ）
+      operationId: deleteDocument
+      description: |
+        Firestore のドキュメントを削除する。
+        gcs_uri が記録されている場合は GCS のメディアファイルも同時に削除する。
+      x-google-backend: vector_api_backend
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 削除対象のドキュメント ID
+      responses:
+        '204':
+          description: 削除成功（レスポンスボディなし）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ドキュメントが存在しない
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/search:
+    post:
+      summary: テキスト / メディアクエリで近傍ベクトル検索（クロスモーダル対応）
+      operationId: searchDocuments
+      x-google-backend: vector_api_backend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: 検索結果（該当なしの場合は空配列）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'

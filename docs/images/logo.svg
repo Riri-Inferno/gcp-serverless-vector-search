@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="GCP Serverless Vector Search logo">
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+  <!-- ベクトル空間を表す外円 -->
+  <circle cx="40" cy="40" r="34" fill="none" stroke="url(#grad)" stroke-width="2.5"/>
+  <!-- 中央 = joint embedding space -->
+  <circle cx="40" cy="40" r="4.5" fill="url(#grad)"/>
+  <!-- 3 モダリティ点 (text / image / media) -->
+  <circle cx="40" cy="14" r="5" fill="url(#grad)"/>
+  <circle cx="62.5" cy="48" r="5" fill="url(#grad)"/>
+  <circle cx="17.5" cy="48" r="5" fill="url(#grad)"/>
+  <!-- 投影線 -->
+  <line x1="40" y1="14" x2="40" y2="40" stroke="url(#grad)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="62.5" y1="48" x2="40" y2="40" stroke="url(#grad)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="17.5" y1="48" x2="40" y2="40" stroke="url(#grad)" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

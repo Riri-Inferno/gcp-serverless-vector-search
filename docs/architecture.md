@@ -25,7 +25,7 @@ flowchart LR
         HZ["healthz\nGET /health\n128Mi / 10s"]
         VA["vector-api\nPOST /v1/documents\nPOST /v1/documents/upload-url\nPOST /v1/search\n1Gi / 120s"]
         FS[("Firestore\ndocuments\n2048-dim COSINE\nADR-0001")]
-        GCS[("GCS media-inputs\ninputs/{uuid}.ext\n30日 TTL")]
+        GCS[("GCS media-inputs\ninputs/{uuid}.ext 登録用 30日 TTL\nqueries/{uuid}.ext 検索用 翌日 TTL\nADR-0018")]
         SM["Secret Manager\nGEMINI_API_KEY\nADR-0006"]
     end
 
@@ -65,7 +65,7 @@ flowchart LR
 | **healthz**              | Cloud Functions Gen2 | `GET /health` 死活監視専用。128Mi / 10s タイムアウト                                |
 | **vector-api**           | Cloud Functions Gen2 | ドキュメント登録・検索・メディアアップロード URL 発行。1Gi / 120s タイムアウト      |
 | **Firestore**            | GCP Managed DB       | ドキュメントとベクトルを保存。2048-dim FLAT インデックス (COSINE 距離)（ADR-0001）  |
-| **GCS media-inputs**     | GCP Storage          | メディアバイナリ一時保管。クライアントが Signed URL で直接 PUT する（ADR-0017）     |
+| **GCS media-inputs**     | GCP Storage          | メディアバイナリ保管。`inputs/`（登録用・30日 TTL）と `queries/`（検索クエリ用・翌日 TTL）でプレフィックス分離（ADR-0017, ADR-0018）|
 | **Secret Manager**       | GCP Managed          | Gemini API Key を安全に注入（ADR-0006）                                             |
 | **Gemini Embedding API** | Google AI (外部)     | `gemini-embedding-2` でテキスト・メディアを 2048-dim ベクトルに変換（ADR-0016）     |
 
@@ -106,7 +106,7 @@ sequenceDiagram
     Note over C,VA: ① Signed URL 取得
     C->>GW: POST /v1/documents/upload-url<br/>{filename, content_type}
     GW->>VA: (X-API-Key 検証済み)
-    VA->>VA: inputs/{uuid4()}.ext を採番
+    VA->>VA: purpose に応じてプレフィックスを選択（inputs/ or queries/）＋ uuid4() を採番
     VA->>GCS: generate_signed_url(V4, PUT, 5min)
     GCS-->>VA: signed URL
     VA-->>C: {upload_url, gcs_uri}

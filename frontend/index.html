@@ -341,7 +341,7 @@
       onclick="handleModalBackdrop(event)"
     >
       <div
-        class="bg-surface border border-stroke rounded-xl p-5 w-full max-w-sm mx-4"
+        class="bg-surface border border-stroke rounded-xl p-5 w-full max-w-2xl mx-4"
       >
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-sm font-semibold">手書きで検索</h3>
@@ -356,7 +356,7 @@
           <canvas
             id="draw-canvas"
             class="block w-full"
-            style="height: 260px; touch-action: none; background: white"
+            style="height: 450px; touch-action: none; background: white"
           ></canvas>
         </div>
         <div class="flex gap-2 mt-4">
@@ -945,21 +945,26 @@
         drawBtn.classList.add("border-accent", "text-accent");
         drawBtn.classList.remove("border-stroke", "text-muted");
 
-        const canvas = document.getElementById("draw-canvas");
-        const ratio = window.devicePixelRatio || 1;
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
+        // モーダル表示直後は layout 未完了で offsetWidth が 0 や不正な値になり、
+        // canvas の内部解像度と CSS 表示サイズがズレ → マウス位置と描画位置のオフセットを引き起こす。
+        // requestAnimationFrame で 1 フレーム待って layout 確定後に canvas を初期化する。
+        requestAnimationFrame(() => {
+          const canvas = document.getElementById("draw-canvas");
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = canvas.offsetWidth * ratio;
+          canvas.height = canvas.offsetHeight * ratio;
+          canvas.getContext("2d").scale(ratio, ratio);
 
-        if (signaturePad) signaturePad.off();
-        signaturePad = new SignaturePad(canvas, {
-          backgroundColor: "rgb(255,255,255)",
-          penColor: "rgb(30,30,30)",
-          minWidth: 2,
-          maxWidth: 5,
+          if (signaturePad) signaturePad.off();
+          signaturePad = new SignaturePad(canvas, {
+            backgroundColor: "rgb(255,255,255)",
+            penColor: "rgb(30,30,30)",
+            minWidth: 2,
+            maxWidth: 5,
+          });
+          signaturePad.addEventListener("beginStroke", () => { redoStack = []; });
+          signaturePad.clear();
         });
-        signaturePad.addEventListener("beginStroke", () => { redoStack = []; });
-        signaturePad.clear();
       }
 
       function closeCanvasModal() {

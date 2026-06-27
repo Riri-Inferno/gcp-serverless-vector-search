@@ -8,9 +8,13 @@
 
 ## システムアーキテクチャ（高位構成図）
 
+drawio で作成した全体俯瞰図。視覚的に主要コンポーネントの配置を把握する用途。
+
 ![System Architecture](images/architecture.png)
 
-## 処理フロー
+## コンポーネント関係図（mermaid）
+
+機械可読な形でコンポーネント間の接続関係と ADR 参照を明示する。テキスト編集で更新でき、リポジトリの diff にも反映される。
 
 ```mermaid
 flowchart LR
@@ -175,12 +179,14 @@ sequenceDiagram
 
 ## ADR 索引
 
-| ADR                                                          | 内容                                                            |
-| ------------------------------------------------------------ | --------------------------------------------------------------- |
-| [0001](adr/0001-api-design-mvp.md)                           | API MVP 設計（エンドポイント・ID・スコア・エラー形式）          |
-| [0003](adr/0003-authentication.md)                           | X-API-Key ヘッダ認証                                            |
-| [0005](adr/0005-cloud-functions-runtime-stack.md)            | Cloud Functions Gen2 / Python / 関数分割粒度                    |
-| [0006](adr/0006-secret-management-sops-kms.md)               | SOPS + KMS による Secret 管理                                   |
-| [0014](adr/0014-cloudflare-worker-host-rewrite.md)           | Cloudflare Worker で Host ヘッダを書き換えて API Gateway へ接続 |
-| [0016](adr/0016-embedding-dimension-2048-firestore-limit.md) | 埋め込み次元を 2048 に確定（Firestore 上限）                    |
-| [0017](adr/0017-multimodal-media-upload-pattern.md)          | GCS Signed URL 直アップロード & Part.from_bytes                 |
+| ADR                                                                 | 内容                                                            |
+| ------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [0001](adr/0001-api-design-mvp.md)                                  | API MVP 設計（エンドポイント・ID・スコア・エラー形式）          |
+| [0003](adr/0003-authentication.md)                                  | X-API-Key ヘッダ認証                                            |
+| [0005](adr/0005-cloud-functions-runtime-stack.md)                   | Cloud Functions Gen2 / Python / 関数分割粒度                    |
+| [0006](adr/0006-secret-management-sops-kms.md)                      | SOPS + KMS による Secret 管理                                   |
+| [0014](adr/0014-cloudflare-worker-host-rewrite.md)                  | Cloudflare Worker で Host ヘッダを書き換えて API Gateway へ接続 |
+| [0016](adr/0016-embedding-dimension-2048-firestore-limit.md)        | 埋め込み次元を 2048 に確定（Firestore 上限）                    |
+| [0017](adr/0017-multimodal-media-upload-pattern.md)                 | GCS Signed URL 直アップロード & Part.from_bytes                 |
+| [0018](adr/0018-gcs-prefix-separation-query-lifecycle.md)           | GCS プレフィックス分離（inputs/ 30日 TTL、queries/ 翌日 TTL）   |
+| [0019](adr/0019-mix-modalities-filter-based-cross-modal.md)         | クロスモーダル検索を filter ベースで実装（`mix_modalities`）    |

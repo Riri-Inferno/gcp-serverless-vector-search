@@ -985,8 +985,24 @@
           closeCanvasModal();
       }
 
+      // SignaturePad の clear() / fromData() は ctx.scale 適用済みの座標で fillRect するため、
+      // 内部解像度を完全にカバーしきれず描画が残ることがある。
+      // transform をリセットして明示的に白塗りすることで確実に全消去する。
+      function _wipeCanvas() {
+        const canvas = document.getElementById("draw-canvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
       function clearCanvas() {
-        signaturePad?.clear();
+        if (!signaturePad) return;
+        signaturePad.clear();
+        _wipeCanvas();
         redoStack = [];
       }
 
@@ -1031,13 +1047,18 @@
           if ((e.ctrlKey || e.metaKey) && e.key === "z") {
             e.preventDefault();
             const data = signaturePad.toData();
-            if (data.length > 0) { redoStack.push(data.pop()); signaturePad.fromData(data); }
+            if (data.length > 0) {
+              redoStack.push(data.pop());
+              _wipeCanvas();           // scale 二重適用への対処
+              signaturePad.fromData(data);
+            }
           }
           if ((e.ctrlKey || e.metaKey) && e.key === "y") {
             e.preventDefault();
             if (redoStack.length > 0) {
               const data = signaturePad.toData();
               data.push(redoStack.pop());
+              _wipeCanvas();
               signaturePad.fromData(data);
             }
           }
